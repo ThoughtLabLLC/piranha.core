@@ -13,7 +13,10 @@ using Piranha.Models;
 
 namespace Piranha.Extend
 {
-    [AttributeUsage(AttributeTargets.Class)]
+	/// <summary>
+	/// Metadata for classes that inherit from <see cref="T:Piranha.Extend.BlockGroup"/>.
+	/// </summary>
+	[AttributeUsage(AttributeTargets.Class)]
     public class BlockGroupTypeAttribute : BlockTypeAttribute
     {
         /// <summary>

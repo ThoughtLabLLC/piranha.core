@@ -31,7 +31,7 @@ namespace Piranha.Manager.Models
         }
 
         /// <summary>
-        /// Gets/set the available items.
+        /// Gets/sets the available items.
         /// </summary>
         public IList<ListItem> Items { get; set; } = new List<ListItem>();
     }

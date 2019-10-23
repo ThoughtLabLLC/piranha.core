@@ -12,7 +12,10 @@ using System;
 
 namespace Piranha.Extend
 {
-    [AttributeUsage(AttributeTargets.Class)]
+	/// <summary>
+	/// Metadata for classes that inherit from <see cref="T:Piranha.Extend.Block"/>.
+	/// </summary>
+	[AttributeUsage(AttributeTargets.Class)]
     public class BlockTypeAttribute : Attribute
     {
         /// <summary>
@@ -26,7 +29,7 @@ namespace Piranha.Extend
         public string Category { get; set; }
 
         /// <summary>
-        /// Gets/set the icon css.
+        /// Gets/sets the icon css.
         /// </summary>
         public string Icon { get; set; }
 

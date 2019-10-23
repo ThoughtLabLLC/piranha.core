@@ -24,7 +24,7 @@ namespace Piranha.Extend
         public Guid Id { get; set; }
 
         /// <summary>
-        /// Gets/set the block type id.
+        /// Gets/sets the block type id.
         /// </summary>
         public string Type { get; set; }
 

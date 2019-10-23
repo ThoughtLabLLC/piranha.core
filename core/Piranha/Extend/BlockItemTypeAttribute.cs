@@ -12,7 +12,10 @@ using System;
 
 namespace Piranha.Extend
 {
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+	/// <summary>
+	/// Metadata for white-listing specific <see cref="T:Piranha.Extend.Block"/> types that can be added to classes that inherit from <see cref="T:Piranha.Extend.BlockGroup"/>.
+	/// </summary>
+	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public class BlockItemTypeAttribute : Attribute
     {
         /// <summary>
