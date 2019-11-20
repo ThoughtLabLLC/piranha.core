@@ -26,30 +26,16 @@ namespace Piranha.Services
         /// <summary>
         /// Gets the available posts for the specified blog.
         /// </summary>
-        /// <returns>The posts</returns>
-        [Obsolete("Please refer to GetAllBySiteIdAsync(siteId)", true)]
-        IEnumerable<DynamicPost> GetAll();
-
-        /// <summary>
-        /// Gets the available post items.
-        /// </summary>
-        /// <returns>The posts</returns>
-        [Obsolete("Please refer to GetAllBySiteIdAsync(siteId)", true)]
-        IEnumerable<T> GetAll<T>() where T : PostBase;
-
-        /// <summary>
-        /// Gets the available posts for the specified blog.
-        /// </summary>
         /// <param name="blogId">The unique blog id</param>
         /// <returns>The posts</returns>
-        Task<IEnumerable<DynamicPost>> GetAllAsync(Guid blogId);
+        Task<IEnumerable<DynamicPost>> GetAllAsync(Guid blogId, int? index = null, int? pageSize = null);
 
         /// <summary>
         /// Gets the available post items.
         /// </summary>
         /// <param name="blogId">The unique id</param>
         /// <returns>The posts</returns>
-        Task<IEnumerable<T>> GetAllAsync<T>(Guid blogId) where T : PostBase;
+        Task<IEnumerable<T>> GetAllAsync<T>(Guid blogId, int? index = null, int? pageSize = null) where T : PostBase;
 
         /// <summary>
         /// Gets the available posts for the specified blog.
@@ -102,6 +88,13 @@ namespace Piranha.Services
         /// <param name="blogId">The unique blog id</param>
         /// <returns>The posts that have a draft</returns>
         Task<IEnumerable<Guid>> GetAllDraftsAsync(Guid blogId);
+
+        /// <summary>
+        /// Gets the number of available posts in the specified archive.
+        /// </summary>
+        /// <param name="archiveId">The archive id</param>
+        /// <returns>The number of posts</returns>
+        Task<int> GetCountAsync(Guid archiveId);
 
         /// <summary>
         /// Gets the post model with the specified id.

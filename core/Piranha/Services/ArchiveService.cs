@@ -9,7 +9,6 @@
  */
 
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Piranha.Models;
 using Piranha.Repositories;
@@ -33,30 +32,6 @@ namespace Piranha.Services
             _repo = repo;
             _paramService = paramService;
             _postService = postService;
-        }
-
-        [Obsolete("The archive service now only loads the PostArchive and not the page. Please refer to GetByIdAsync<T>()", true)]
-        public T GetById<T>(Guid id, int? page = 1, Guid? categoryId = null, int? year = null, int? month = null, int? pageSize = null) where T : Models.ArchivePage<T>
-        {
-            return null;
-        }
-
-        [Obsolete("The archive service now only loads the PostArchive and not the page. Please refer to GetByIdAsync<T>()", true)]
-        public T GetById<T>(Guid id, int? page = 1, int? year = null, int? month = null, int? pageSize = null) where T : Models.ArchivePage<T>
-        {
-            return null;
-        }
-
-        [Obsolete("The archive service now only loads the PostArchive and not the page. Please refer to GetByIdAsync<T>()", true)]
-        public T GetByCategoryId<T>(Guid id, Guid categoryId, int? page = 1, int? year = null, int? month = null, int? pageSize = null) where T : Models.ArchivePage<T>
-        {
-            return null;
-        }
-
-        [Obsolete("The archive service now only loads the PostArchive and not the page. Please refer to GetByIdAsync<T>()", true)]
-        public T GetByTagId<T>(Guid id, Guid tagId, int? page = 1, int? year = null, int? month = null, int? pageSize = null) where T : Models.ArchivePage<T>
-        {
-            return null;
         }
 
         /// <summary>
@@ -125,11 +100,11 @@ namespace Piranha.Services
             // Set related info
             if (categoryId.HasValue)
             {
-                model.Category = await _postService.GetCategoryByIdAsync(categoryId.Value);
+                model.Category = await _postService.GetCategoryByIdAsync(categoryId.Value).ConfigureAwait(false);
             }
             if (tagId.HasValue)
             {
-                model.Tag = await _postService.GetTagByIdAsync(tagId.Value);
+                model.Tag = await _postService.GetTagByIdAsync(tagId.Value).ConfigureAwait(false);
             }
 
             // Get the id of the current posts

@@ -228,6 +228,7 @@ namespace Piranha.Repositories
             site.Hostnames = model.Hostnames;
             site.Culture = model.Culture;
             site.IsDefault = model.IsDefault;
+            site.ContentLastModified = model.ContentLastModified;
             site.LastModified = DateTime.Now;
 
             await _db.SaveChangesAsync().ConfigureAwait(false);
@@ -265,6 +266,16 @@ namespace Piranha.Repositories
                 content.Title = site.Title;
 
                 _contentService.Transform(content, type, site);
+
+                // Make sure foreign key is set for fields
+                foreach (var field in site.Fields)
+                {
+                    if (field.SiteId == Guid.Empty)
+                    {
+                        field.SiteId = site.Id;
+                        await _db.SiteFields.AddAsync(field).ConfigureAwait(false);
+                    }
+                }
 
                 // Since we've updated global site content, update the
                 // global last modified date for the site.
