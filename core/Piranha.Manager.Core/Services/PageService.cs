@@ -362,6 +362,26 @@ namespace Piranha.Manager.Services
                                 page.Blocks.Add(pageBlock);
                             }
                         }
+						else if (block is GenericBlockModel genericBlock)
+						{
+							var genericBlockType = App.Blocks.GetByType(genericBlock.Type);
+
+							if (genericBlockType != null)
+							{
+								var pageBlock = (Extend.Block)Activator.CreateInstance(genericBlockType.Type);
+
+								pageBlock.Id = genericBlock.Id;
+								pageBlock.Type = genericBlock.Type;
+
+								foreach (var field in genericBlock.Fields)
+								{
+									var prop = pageBlock.GetType().GetProperty(field.Meta.Id, App.PropertyBindings);
+									prop.SetValue(pageBlock, field.Model);
+								}
+
+								page.Blocks.Add(pageBlock);
+							}
+						}
                         else if (block is BlockItemModel blockItem)
                         {
                             page.Blocks.Add(blockItem.Model);
@@ -468,7 +488,7 @@ namespace Piranha.Manager.Services
             var type = App.PageTypes.GetById(page.TypeId);
             var route = type.Routes.FirstOrDefault(r => r.Route == page.Route) ?? type.Routes.FirstOrDefault();
 
-            var model = new PageEditModel
+            var pageEditModel = new PageEditModel
             {
                 Id = page.Id,
                 SiteId = page.SiteId,
@@ -496,7 +516,8 @@ namespace Piranha.Manager.Services
 
             foreach (var r in type.Routes)
             {
-                model.Routes.Add(new RouteModel {
+                pageEditModel.Routes.Add(new RouteModel
+				{
                     Title = r.Title,
                     Route = r.Route
                 });
@@ -581,7 +602,7 @@ namespace Piranha.Manager.Services
 
                     region.Items.Add(regionItem);
                 }
-                model.Regions.Add(region);
+                pageEditModel.Regions.Add(region);
             }
 
             foreach (var block in page.Blocks)
@@ -612,51 +633,9 @@ namespace Piranha.Manager.Services
                             "block-group-horizontal" : "block-group-vertical";
                     }
 
-                    foreach (var prop in block.GetType().GetProperties(App.PropertyBindings))
-                    {
-                        if (typeof(Extend.IField).IsAssignableFrom(prop.PropertyType))
-                        {
-                            var fieldType = App.Fields.GetByType(prop.PropertyType);
-                            var field = new FieldModel
-                            {
-                                Model = (Extend.IField)prop.GetValue(block),
-                                Meta = new FieldMeta
-                                {
-                                    Id = prop.Name,
-                                    Name = prop.Name,
-                                    Component = fieldType.Component,
-                                }
-                            };
+					PopulateBlockFieldModels(block, group.Fields);
 
-                            // Check if this is a select field
-                            if (typeof(Extend.Fields.SelectFieldBase).IsAssignableFrom(fieldType.Type))
-                            {
-                                foreach(var item in ((Extend.Fields.SelectFieldBase)Activator.CreateInstance(fieldType.Type)).Items)
-                                {
-                                    field.Meta.Options.Add(Convert.ToInt32(item.Value), item.Title);
-                                }
-                            }
-
-                            // Check if we have field meta-data available
-                            var attr = prop.GetCustomAttribute<Extend.FieldAttribute>();
-                            if (attr != null)
-                            {
-                                field.Meta.Name = !string.IsNullOrWhiteSpace(attr.Title) ? attr.Title : field.Meta.Name;
-                                field.Meta.Placeholder = attr.Placeholder;
-                                field.Meta.IsHalfWidth = attr.Options.HasFlag(FieldOption.HalfWidth);
-                            }
-
-                            // Check if we have field description meta-data available
-                            var descAttr = prop.GetCustomAttribute<Extend.FieldDescriptionAttribute>();
-                            if (descAttr != null)
-                            {
-                                field.Meta.Description = descAttr.Text;
-                            }
-                            group.Fields.Add(field);
-                        }
-                    }
-
-                    bool firstChild = true;
+					bool firstChild = true;
                     foreach (var child in ((Extend.BlockGroup)block).Items)
                     {
                         blockType = App.Blocks.GetByType(child.Type);
@@ -675,38 +654,112 @@ namespace Piranha.Manager.Services
                         });
                         firstChild = false;
                     }
-                    model.Blocks.Add(group);
+                    pageEditModel.Blocks.Add(group);
                 }
-                else
-                {
-                    model.Blocks.Add(new BlockItemModel
-                    {
-                        Model = block,
-                        Meta = new BlockMeta
-                        {
-                            Name = blockType.Name,
-                            Title = block.GetTitle(),
-                            Icon = blockType.Icon,
-                            Component = blockType.Component,
-                            IsReadonly = page.OriginalPageId.HasValue,
-                            isCollapsed = config.ManagerDefaultCollapsedBlocks
-                        }
-                    });
+				else
+				{
+					if (blockType.Type.GetCustomAttribute<Extend.GenericBlockTypeAttribute>() == null)
+					{
+						pageEditModel.Blocks.Add(new BlockItemModel
+						{
+							Model = block,
+							Meta = new BlockMeta
+							{
+								Name = blockType.Name,
+								Title = block.GetTitle(),
+								Icon = blockType.Icon,
+								Component = blockType.Component,
+								IsReadonly = page.OriginalPageId.HasValue,
+								isCollapsed = config.ManagerDefaultCollapsedBlocks
+							}
+						});
+					}
+					else
+					{
+						var genericBlockModel = new GenericBlockModel
+						{
+							DisplayTitleProperty = blockType.Type.GetCustomAttribute<Extend.GenericBlockTypeAttribute>().DisplayTitleProperty,
+							Id = block.Id,
+							Type = block.Type,
+							Model = block,
+							Meta = new BlockMeta
+							{
+								Name = blockType.Name,
+								Title = block.GetTitle(),
+								Icon = blockType.Icon,
+								Component = blockType.Component,
+								IsReadonly = page.OriginalPageId.HasValue,
+								isCollapsed = config.ManagerDefaultCollapsedBlocks
+							}
+						};
+
+						PopulateBlockFieldModels(block, genericBlockModel.Fields, notifyChange: true);
+
+						pageEditModel.Blocks.Add(genericBlockModel);
+					}
                 }
             }
 
             // Custom editors
             foreach (var editor in type.CustomEditors)
             {
-                model.Editors.Add(new EditorModel
+                pageEditModel.Editors.Add(new EditorModel
                 {
                     Component = editor.Component,
                     Icon = editor.Icon,
                     Name = editor.Title
                 });
             }
-            return model;
+            return pageEditModel;
         }
+
+		private void PopulateBlockFieldModels(Extend.Block block, IList<FieldModel> fieldModels, bool notifyChange = false)
+		{
+			foreach (var prop in block.GetType().GetProperties(App.PropertyBindings))
+			{
+				if (typeof(Extend.IField).IsAssignableFrom(prop.PropertyType))
+				{
+					var fieldType = App.Fields.GetByType(prop.PropertyType);
+					var field = new FieldModel
+					{
+						Model = (Extend.IField)prop.GetValue(block),
+						Meta = new FieldMeta
+						{
+							Id = prop.Name,
+							Name = prop.Name,
+							Component = fieldType.Component,
+						}
+					};
+
+					// Check if this is a select field
+					if (typeof(Extend.Fields.SelectFieldBase).IsAssignableFrom(fieldType.Type))
+					{
+						foreach (var item in ((Extend.Fields.SelectFieldBase)Activator.CreateInstance(fieldType.Type)).Items)
+						{
+							field.Meta.Options.Add(Convert.ToInt32(item.Value), item.Title);
+						}
+					}
+
+					// Check if we have field meta-data available
+					var attr = prop.GetCustomAttribute<Extend.FieldAttribute>();
+					if (attr != null)
+					{
+						field.Meta.Name = !string.IsNullOrWhiteSpace(attr.Title) ? attr.Title : field.Meta.Name;
+						field.Meta.NotifyChange = notifyChange;
+						field.Meta.Placeholder = attr.Placeholder;
+						field.Meta.IsHalfWidth = attr.Options.HasFlag(FieldOption.HalfWidth);
+					}
+
+					// Check if we have field description meta-data available
+					var descAttr = prop.GetCustomAttribute<Extend.FieldDescriptionAttribute>();
+					if (descAttr != null)
+					{
+						field.Meta.Description = descAttr.Text;
+					}
+					fieldModels.Add(field);
+				}
+			}
+		}
 
         private string GetState(DynamicPage page, bool isDraft)
         {

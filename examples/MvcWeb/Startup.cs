@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MvcWeb.Models.Blocks;
 using Piranha;
 using Piranha.AspNetCore.Identity.SQLite;
 
@@ -48,6 +49,10 @@ namespace MvcWeb
             }
 
             App.Init(api);
+
+			App.Blocks.Register<ContentHeaderBlock>();
+
+			App.Fields.RegisterSelect<ContentHeadingLevel>();
 
             // Configure cache level
             App.CacheLevel = Piranha.Cache.CacheLevel.Full;

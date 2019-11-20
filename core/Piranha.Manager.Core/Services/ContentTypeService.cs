@@ -233,77 +233,109 @@ namespace Piranha.Manager.Services
                             "block-group-horizontal" : "block-group-vertical";
                     }
 
-                    foreach (var prop in block.GetType().GetProperties(App.PropertyBindings))
-                    {
-                        if (typeof(Extend.IField).IsAssignableFrom(prop.PropertyType))
-                        {
-                            var fieldType = App.Fields.GetByType(prop.PropertyType);
+					PopulateBlockFieldModels(block, item.Fields);
 
-                            // Create the block field
-                            var field = new FieldModel
-                            {
-                                Model = (Extend.IField)prop.GetValue(block),
-                                Meta = new FieldMeta
-                                {
-                                    Id = prop.Name,
-                                    Name = prop.Name,
-                                    Component = fieldType.Component,
-                                }
-                            };
-
-                            // Check if this is a select field
-                            if (typeof(Extend.Fields.SelectFieldBase).IsAssignableFrom(fieldType.Type))
-                            {
-                                foreach(var selectItem in ((Extend.Fields.SelectFieldBase)Activator.CreateInstance(fieldType.Type)).Items)
-                                {
-                                    field.Meta.Options.Add(Convert.ToInt32(selectItem.Value), selectItem.Title);
-                                }
-                            }
-
-                            // Check if we have field meta-data available
-                            var attr = prop.GetCustomAttribute<Extend.FieldAttribute>();
-                            if (attr != null)
-                            {
-                                field.Meta.Name = !string.IsNullOrWhiteSpace(attr.Title) ? attr.Title : field.Meta.Name;
-                                field.Meta.Placeholder = attr.Placeholder;
-                                field.Meta.IsHalfWidth = attr.Options.HasFlag(FieldOption.HalfWidth);
-                            }
-
-                            // Check if we have field description meta-data available
-                            var descAttr = prop.GetCustomAttribute<Extend.FieldDescriptionAttribute>();
-                            if (descAttr != null)
-                            {
-                                field.Meta.Description = descAttr.Text;
-                            }
-
-                            item.Fields.Add(field);
-                        }
-                    }
-
-                    return new AsyncResult<BlockModel>
+					return new AsyncResult<BlockModel>
                     {
                         Body = item
                     };
                 }
                 else
                 {
-                    return new AsyncResult<BlockModel>
-                    {
-                        Body = new BlockItemModel
-                        {
-                            Model = block,
-                            Meta = new BlockMeta
-                            {
-                                Name = blockType.Name,
-                                Title = block.GetTitle(),
-                                Icon = blockType.Icon,
-                                Component = blockType.Component
-                            }
-                        }
-                    };
+					if (blockType.Type.GetCustomAttribute<Extend.GenericBlockTypeAttribute>() == null)
+					{
+						return new AsyncResult<BlockModel>
+						{
+							Body = new BlockItemModel
+							{
+								Model = block,
+								Meta = new BlockMeta
+								{
+									Name = blockType.Name,
+									Title = block.GetTitle(),
+									Icon = blockType.Icon,
+									Component = blockType.Component
+								}
+							}
+						};
+					}
+					else
+					{
+						var genericBlockModel = new GenericBlockModel
+						{
+							DisplayTitleProperty = blockType.Type.GetCustomAttribute<Extend.GenericBlockTypeAttribute>().DisplayTitleProperty,
+							Type = block.Type,
+							Model = block,
+							Meta = new BlockMeta
+							{
+								Name = blockType.Name,
+								Title = block.GetTitle(),
+								Icon = blockType.Icon,
+								Component = blockType.Component
+							}
+						};
+
+						PopulateBlockFieldModels(block, genericBlockModel.Fields, notifyChange: true);
+
+						return new AsyncResult<BlockModel>
+						{
+							Body = genericBlockModel
+						};
+					}
                 }
             }
             return null;
         }
+
+		private void PopulateBlockFieldModels(Extend.Block block, IList<FieldModel> fieldModels, bool notifyChange = false)
+		{
+			foreach (var prop in block.GetType().GetProperties(App.PropertyBindings))
+			{
+				if (typeof(Extend.IField).IsAssignableFrom(prop.PropertyType))
+				{
+					var fieldType = App.Fields.GetByType(prop.PropertyType);
+
+					// Create the block field
+					var field = new FieldModel
+					{
+						Model = (Extend.IField)prop.GetValue(block),
+						Meta = new FieldMeta
+						{
+							Id = prop.Name,
+							Name = prop.Name,
+							Component = fieldType.Component,
+						}
+					};
+
+					// Check if this is a select field
+					if (typeof(Extend.Fields.SelectFieldBase).IsAssignableFrom(fieldType.Type))
+					{
+						foreach (var selectItem in ((Extend.Fields.SelectFieldBase)Activator.CreateInstance(fieldType.Type)).Items)
+						{
+							field.Meta.Options.Add(Convert.ToInt32(selectItem.Value), selectItem.Title);
+						}
+					}
+
+					// Check if we have field meta-data available
+					var attr = prop.GetCustomAttribute<Extend.FieldAttribute>();
+					if (attr != null)
+					{
+						field.Meta.Name = !string.IsNullOrWhiteSpace(attr.Title) ? attr.Title : field.Meta.Name;
+						field.Meta.NotifyChange = notifyChange;
+						field.Meta.Placeholder = attr.Placeholder;
+						field.Meta.IsHalfWidth = attr.Options.HasFlag(FieldOption.HalfWidth);
+					}
+
+					// Check if we have field description meta-data available
+					var descAttr = prop.GetCustomAttribute<Extend.FieldDescriptionAttribute>();
+					if (descAttr != null)
+					{
+						field.Meta.Description = descAttr.Text;
+					}
+
+					fieldModels.Add(field);
+				}
+			}
+		}
     }
 }

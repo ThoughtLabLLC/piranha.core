@@ -71,7 +71,11 @@ namespace Piranha.Runtime
                     item.UseCustomView = groupAttr.UseCustomView;
                     item.Display = groupAttr.Display;
                 }
-            }
+				else if (attr is GenericBlockTypeAttribute genericAttr)
+				{
+					item.Component = !string.IsNullOrWhiteSpace(attr.Component) ? attr.Component : "generic-block";
+				}
+			}
 
             var itemAttrs = typeof(TValue).GetTypeInfo().GetCustomAttributes(typeof(BlockItemTypeAttribute));
             foreach (var itemAttr in itemAttrs)

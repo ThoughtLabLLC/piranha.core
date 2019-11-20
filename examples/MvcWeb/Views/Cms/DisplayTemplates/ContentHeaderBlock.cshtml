@@ -1,0 +1,7 @@
+@model MvcWeb.Models.Blocks.ContentHeaderBlock
+
+@{
+	var tagName = Model.HeadingLevel.Value == MvcWeb.Models.Blocks.ContentHeadingLevel.None ? "div" : Model.HeadingLevel.Value.ToString().ToLower();
+}
+
+<@(tagName)>@Model.Text</@(tagName)>

@@ -114,19 +114,20 @@ var js = [
     {
         name: "piranha.contentedit.js",
         items: [
-            "assets/src/js/components/region.js",
-            "assets/src/js/components/post-archive.js",
             "assets/src/js/components/block-group.js",
             "assets/src/js/components/block-group-horizontal.js",
+            "assets/src/js/components/post-archive.js",
+            "assets/src/js/components/region.js",
 
+            "assets/src/js/components/blocks/audio-block.js",
+            "assets/src/js/components/blocks/generic-block.js",
             "assets/src/js/components/blocks/html-block.js",
             "assets/src/js/components/blocks/html-column-block.js",
             "assets/src/js/components/blocks/image-block.js",
+            "assets/src/js/components/blocks/missing-block.js",
             "assets/src/js/components/blocks/quote-block.js",
             "assets/src/js/components/blocks/separator-block.js",
             "assets/src/js/components/blocks/text-block.js",
-            "assets/src/js/components/blocks/missing-block.js",
-            "assets/src/js/components/blocks/audio-block.js",
             "assets/src/js/components/blocks/video-block.js",
 
             "assets/src/js/components/fields/audio-field.js",
@@ -142,10 +143,10 @@ var js = [
             "assets/src/js/components/fields/page-field.js",
             "assets/src/js/components/fields/post-field.js",
             "assets/src/js/components/fields/readonly-field.js",
+            "assets/src/js/components/fields/select-field.js",
             "assets/src/js/components/fields/string-field.js",
             "assets/src/js/components/fields/text-field.js",
             "assets/src/js/components/fields/video-field.js",
-            "assets/src/js/components/fields/select-field.js",
         ]
     },
     {
