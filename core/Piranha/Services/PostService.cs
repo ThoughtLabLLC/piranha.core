@@ -73,31 +73,11 @@ namespace Piranha.Services
         /// <summary>
         /// Gets the available posts for the specified blog.
         /// </summary>
-        /// <returns>The posts</returns>
-        [Obsolete("Please refer to GetAllBySiteIdAsync(siteId)", true)]
-        public IEnumerable<DynamicPost> GetAll()
-        {
-            return GetAll<DynamicPost>();
-        }
-
-        /// <summary>
-        /// Gets the available post items.
-        /// </summary>
-        /// <returns>The posts</returns>
-        [Obsolete("Please refer to GetAllBySiteIdAsync(siteId)", true)]
-        public IEnumerable<T> GetAll<T>() where T : PostBase
-        {
-            return null;
-        }
-
-        /// <summary>
-        /// Gets the available posts for the specified blog.
-        /// </summary>
         /// <param name="blogId">The unique blog id</param>
         /// <returns>The posts</returns>
-        public Task<IEnumerable<DynamicPost>> GetAllAsync(Guid blogId)
+        public Task<IEnumerable<DynamicPost>> GetAllAsync(Guid blogId, int? index = null, int? pageSize = null)
         {
-            return GetAllAsync<DynamicPost>(blogId);
+            return GetAllAsync<DynamicPost>(blogId, index, pageSize);
         }
 
         /// <summary>
@@ -105,10 +85,19 @@ namespace Piranha.Services
         /// </summary>
         /// <param name="blogId">The unique id</param>
         /// <returns>The posts</returns>
-        public async Task<IEnumerable<T>> GetAllAsync<T>(Guid blogId) where T : PostBase
+        public async Task<IEnumerable<T>> GetAllAsync<T>(Guid blogId, int? index = null, int? pageSize = null) where T : PostBase
         {
+            if (index.HasValue && !pageSize.HasValue)
+            {
+                // No page size provided, use default archive size
+                using (var config = new Config(_paramService))
+                {
+                    pageSize = config.ArchivePageSize;
+                }
+            }
+
             var models = new List<T>();
-            var posts = await _repo.GetAll(blogId).ConfigureAwait(false);
+            var posts = await _repo.GetAll(blogId, index, pageSize).ConfigureAwait(false);
             var pages = new List<PageInfo>();
 
             foreach (var postId in posts)
@@ -215,6 +204,16 @@ namespace Piranha.Services
         public Task<IEnumerable<Guid>> GetAllDraftsAsync(Guid blogId)
         {
             return _repo.GetAllDrafts(blogId);
+        }
+
+        /// <summary>
+        /// Gets the number of available posts in the specified archive.
+        /// </summary>
+        /// <param name="archiveId">The archive id</param>
+        /// <returns>The number of posts</returns>
+        public Task<int> GetCountAsync(Guid archiveId)
+        {
+            return _repo.GetCount(archiveId);
         }
 
         /// <summary>
@@ -346,7 +345,7 @@ namespace Piranha.Services
         /// <returns>The draft, or null if no draft exists</returns>
         public async Task<T> GetDraftByIdAsync<T>(Guid id) where T : PostBase
         {
-            var draft = await _repo.GetDraftById<T>(id);
+            var draft = await _repo.GetDraftById<T>(id).ConfigureAwait(false);
 
             if (draft != null)
             {
@@ -525,13 +524,13 @@ namespace Piranha.Services
             App.Hooks.OnBeforeSave<PostBase>(model);
 
             // Handle revisions and save
-            var current = await _repo.GetById<PostInfo>(model.Id);
+            var current = await _repo.GetById<PostInfo>(model.Id).ConfigureAwait(false);
 
             if (IsPublished(current) && isDraft)
             {
                 // We're saving a draft since we have a previously
                 // published version of the post
-                await _repo.SaveDraft(model);
+                await _repo.SaveDraft(model).ConfigureAwait(false);
             }
             else
             {
@@ -548,8 +547,8 @@ namespace Piranha.Services
                     {
                         // Save current as a revision before saving the model
                         // and if a draft revision exists, remove it.
-                        await _repo.DeleteDraft(model.Id);
-                        await _repo.CreateRevision(model.Id, config.PostRevisions);
+                        await _repo.DeleteDraft(model.Id).ConfigureAwait(false);
+                        await _repo.CreateRevision(model.Id, config.PostRevisions).ConfigureAwait(false);
                     }
                 }
 
