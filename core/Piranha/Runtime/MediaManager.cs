@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -43,7 +43,7 @@ namespace Piranha.Runtime
         /// </summary>
         public class MediaTypeList : List<MediaTypeItem>
         {
-            private bool _allowProcessing = false;
+            private readonly bool _allowProcessing;
 
             /// <summary>
             /// Default constructor
@@ -59,6 +59,7 @@ namespace Piranha.Runtime
             /// </summary>
             /// <param name="extension">The file extension</param>
             /// <param name="contentType">The content type</param>
+            /// <param name="allowProcessing">If image processing should be allowed</param>
             public void Add(string extension, string contentType, bool? allowProcessing = null)
             {
                 Add(new MediaTypeItem
@@ -106,6 +107,11 @@ namespace Piranha.Runtime
         public MediaTypeList Resources { get; set; } = new MediaTypeList();
 
         /// <summary>
+        /// Gets/sets the currently registered meta properties for media.
+        /// </summary>
+        public IList<string> MetaProperties { get; set; } = new List<string>();
+
+        /// <summary>
         /// Checks if the given filename has a supported extension.
         /// </summary>
         /// <param name="filename">The path or filename</param>
@@ -135,22 +141,24 @@ namespace Piranha.Runtime
             {
                 return MediaType.Document;
             }
-            else if (Images.ContainsExtension(extension))
+
+            if (Images.ContainsExtension(extension))
             {
                 return MediaType.Image;
             }
-            else if (Videos.ContainsExtension(extension))
+            if (Videos.ContainsExtension(extension))
             {
                 return MediaType.Video;
             }
-            else if (Audio.ContainsExtension(extension))
+            if (Audio.ContainsExtension(extension))
             {
                 return MediaType.Audio;
             }
-            else if (Resources.ContainsExtension(extension))
+            if (Resources.ContainsExtension(extension))
             {
                 return MediaType.Resource;
             }
+
             return MediaType.Unknown;
         }
 
@@ -169,19 +177,20 @@ namespace Piranha.Runtime
             {
                 return item.ContentType;
             }
-            else if ((item = Images.SingleOrDefault(t => t.Extension == extension)) != null)
+
+            if ((item = Images.SingleOrDefault(t => t.Extension == extension)) != null)
             {
                 return item.ContentType;
             }
-            else if ((item = Videos.SingleOrDefault(t => t.Extension == extension)) != null)
+            if ((item = Videos.SingleOrDefault(t => t.Extension == extension)) != null)
             {
                 return item.ContentType;
             }
-            else if ((item = Audio.SingleOrDefault(t => t.Extension == extension)) != null)
+            if ((item = Audio.SingleOrDefault(t => t.Extension == extension)) != null)
             {
                 return item.ContentType;
             }
-            else if ((item = Resources.SingleOrDefault(t => t.Extension == extension)) != null)
+            if ((item = Resources.SingleOrDefault(t => t.Extension == extension)) != null)
             {
                 return item.ContentType;
             }
@@ -203,22 +212,24 @@ namespace Piranha.Runtime
             {
                 return item;
             }
-            else if ((item = Images.SingleOrDefault(t => t.Extension == extension)) != null)
+
+            if ((item = Images.SingleOrDefault(t => t.Extension == extension)) != null)
             {
                 return item;
             }
-            else if ((item = Videos.SingleOrDefault(t => t.Extension == extension)) != null)
+            if ((item = Videos.SingleOrDefault(t => t.Extension == extension)) != null)
             {
                 return item;
             }
-            else if ((item = Audio.SingleOrDefault(t => t.Extension == extension)) != null)
+            if ((item = Audio.SingleOrDefault(t => t.Extension == extension)) != null)
             {
                 return item;
             }
-            else if ((item = Resources.SingleOrDefault(t => t.Extension == extension)) != null)
+            if ((item = Resources.SingleOrDefault(t => t.Extension == extension)) != null)
             {
                 return item;
             }
+
             return null;
         }
     }

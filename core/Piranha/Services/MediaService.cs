@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -61,7 +61,6 @@ namespace Piranha.Services
             return returns;
         }
 
-
         /// <summary>
         /// Gets all media available in the specified folder.
         /// </summary>
@@ -97,7 +96,6 @@ namespace Piranha.Services
             }
             return models;
         }
-
 
         /// <summary>
         /// Gets the media with the given id.
@@ -163,6 +161,35 @@ namespace Piranha.Services
                 }
             }
             return structure;
+        }
+
+        /// <summary>
+        /// Updates the meta data for the given media model.
+        /// </summary>
+        /// <param name="model">The model</param>
+        public async Task SaveAsync(Media model)
+        {
+            // Make sure we have an existing media model with this id.
+            var current = await GetByIdAsync(model.Id);
+
+            if (current != null)
+            {
+                // Validate model
+                var context = new ValidationContext(model);
+                Validator.ValidateObject(model, context, true);
+
+                // Call hooks & save
+                App.Hooks.OnBeforeSave(model);
+                await _repo.Save(model).ConfigureAwait(false);
+                App.Hooks.OnAfterSave(model);
+
+                RemoveFromCache(model);
+                RemoveStructureFromCache();
+            }
+            else
+            {
+                throw new FileNotFoundException("You can only update meta data for an existing media object");
+            }
         }
 
         /// <summary>
@@ -266,11 +293,12 @@ namespace Piranha.Services
                 }
             }
 
-            App.Hooks.OnBeforeSave<Media>(model);
+            App.Hooks.OnBeforeSave(model);
             await _repo.Save(model).ConfigureAwait(false);
-            App.Hooks.OnAfterSave<Media>(model);
+            App.Hooks.OnAfterSave(model);
 
             RemoveFromCache(model);
+            RemoveStructureFromCache();
         }
 
         /// <summary>
@@ -291,9 +319,9 @@ namespace Piranha.Services
             Validator.ValidateObject(model, context, true);
 
             // Call hooks & save
-            App.Hooks.OnBeforeSave<MediaFolder>(model);
+            App.Hooks.OnBeforeSave(model);
             await _repo.SaveFolder(model).ConfigureAwait(false);
-            App.Hooks.OnAfterSave<MediaFolder>(model);
+            App.Hooks.OnAfterSave(model);
 
             RemoveFromCache(model);
             RemoveStructureFromCache();
@@ -302,12 +330,13 @@ namespace Piranha.Services
         /// <summary>
         /// Moves the media to the folder with the specified id.
         /// </summary>
-        /// <param name="media">The media</param>
+        /// <param name="model">The model</param>
         /// <param name="folderId">The folder id</param>
         public async Task MoveAsync(Media model, Guid? folderId)
         {
             await _repo.Move(model, folderId).ConfigureAwait(false);
             RemoveFromCache(model);
+            RemoveStructureFromCache();
         }
 
         /// <summary>
@@ -337,7 +366,7 @@ namespace Piranha.Services
 
             var media = await GetByIdAsync(id).ConfigureAwait(false);
 
-            return media != null ? await EnsureVersionAsync(media, width, height) : null;
+            return media != null ? await EnsureVersionAsync(media, width, height).ConfigureAwait(false) : null;
         }
 
         public async Task<string> EnsureVersionAsync(Media media, int width, int? height = null)
@@ -457,12 +486,13 @@ namespace Piranha.Services
                     }
 
                     // Call hooks & save
-                    App.Hooks.OnBeforeDelete<Media>(media);
+                    App.Hooks.OnBeforeDelete(media);
                     await _repo.Delete(id).ConfigureAwait(false);
                     await session.DeleteAsync(media.Id + "-" + media.Filename).ConfigureAwait(false);
-                    App.Hooks.OnAfterDelete<Media>(media);
+                    App.Hooks.OnAfterDelete(media);
                 }
                 RemoveFromCache(media);
+                RemoveStructureFromCache();
             }
         }
 
@@ -495,9 +525,9 @@ namespace Piranha.Services
                 // {
 
                 // Call hooks & delete
-                App.Hooks.OnBeforeDelete<MediaFolder>(folder);
+                App.Hooks.OnBeforeDelete(folder);
                 await _repo.DeleteFolder(id).ConfigureAwait(false);
-                App.Hooks.OnAfterDelete<MediaFolder>(folder);
+                App.Hooks.OnAfterDelete(folder);
 
                 RemoveFromCache(folder);
                 //}
@@ -524,7 +554,16 @@ namespace Piranha.Services
                 // Get public url
                 model.PublicUrl = GetPublicUrl(model);
 
-                App.Hooks.OnLoad<Media>(model);
+                // Create missing properties
+                foreach (var key in App.MediaTypes.MetaProperties)
+                {
+                    if (!model.Properties.Any(p => p.Key == key))
+                    {
+                        model.Properties.Add(key, null);
+                    }
+                }
+
+                App.Hooks.OnLoad(model);
 
                 _cache?.Set(model.Id.ToString(), model);
             }
@@ -538,7 +577,7 @@ namespace Piranha.Services
         {
             if (model != null)
             {
-                App.Hooks.OnLoad<MediaFolder>(model);
+                App.Hooks.OnLoad(model);
 
                 _cache?.Set(model.Id.ToString(), model);
             }
@@ -567,9 +606,8 @@ namespace Piranha.Services
         }
 
         /// <summary>
-        /// Removes the given model from cache.
+        /// Removes the media structure from cache.
         /// </summary>
-        /// <param name="model">The model</param>
         private void RemoveStructureFromCache()
         {
             _cache?.Remove(MEDIA_STRUCTURE);

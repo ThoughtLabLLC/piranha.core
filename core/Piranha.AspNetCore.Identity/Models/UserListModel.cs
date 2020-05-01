@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2018 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
- * 
+ *
  * http://github.com/piranhacms/piranha
- * 
+ *
  */
 
 using System;
@@ -28,7 +28,8 @@ namespace Piranha.AspNetCore.Identity.Models
                     {
                         Id = u.Id,
                         UserName = u.UserName,
-                        Email = u.Email
+                        Email = u.Email,
+                        GravatarUrl = !string.IsNullOrWhiteSpace(u.Email) ? Utils.GetGravatarUrl(u.Email, 25) : null
                     }).ToList()
             };
 
@@ -60,6 +61,8 @@ namespace Piranha.AspNetCore.Identity.Models
             public string UserName { get; set; }
             public string Email { get; set; }
             public IList<string> Roles { get; set; } = new List<string>();
+
+            public string GravatarUrl { get; set; }
         }
     }
 }

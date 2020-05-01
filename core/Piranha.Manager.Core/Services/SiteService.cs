@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -31,6 +31,7 @@ namespace Piranha.Manager.Services
         /// Default constructor.
         /// </summary>
         /// <param name="api">The current api</param>
+        /// <param name="factory">The content factory</param>
         public SiteService(IApi api, IContentFactory factory)
         {
             _api = api;
@@ -123,7 +124,7 @@ namespace Piranha.Manager.Services
 
                 if (site == null)
                 {
-                    site = _factory.Create<DynamicSiteContent>(siteType);
+                    site = await _factory.CreateAsync<DynamicSiteContent>(siteType);
                     site.Id = model.Id;
                 }
 
@@ -244,6 +245,7 @@ namespace Piranha.Manager.Services
                         Description = regionType.Description,
                         Placeholder = regionType.ListTitlePlaceholder,
                         IsCollection = regionType.Collection,
+                        Expanded = regionType.ListExpand,
                         Icon = regionType.Icon,
                         Display = regionType.Display.ToString().ToLower()
                     }

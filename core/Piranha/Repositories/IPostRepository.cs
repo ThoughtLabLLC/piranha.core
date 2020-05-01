@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -21,6 +21,8 @@ namespace Piranha.Repositories
         /// Gets the available posts for the specified blog.
         /// </summary>
         /// <param name="blogId">The unique id</param>
+        /// <param name="index">The optional page to fetch</param>
+        /// <param name="pageSize">The optional page size</param>
         /// <returns>The posts</returns>
         Task<IEnumerable<Guid>> GetAll(Guid blogId, int? index = null, int? pageSize = null);
 
@@ -34,14 +36,14 @@ namespace Piranha.Repositories
         /// <summary>
         /// Gets all available categories for the specified blog.
         /// </summary>
-        /// <param name="id">The blog id</param>
+        /// <param name="blogId">The blog id</param>
         /// <returns>The available categories</returns>
         Task<IEnumerable<Taxonomy>> GetAllCategories(Guid blogId);
 
         /// <summary>
         /// Gets all available tags for the specified blog.
         /// </summary>
-        /// <param name="id">The blog id</param>
+        /// <param name="blogId">The blog id</param>
         /// <returns>The available tags</returns>
         Task<IEnumerable<Taxonomy>> GetAllTags(Guid blogId);
 
@@ -52,6 +54,27 @@ namespace Piranha.Repositories
         /// <param name="blogId">The unique blog id</param>
         /// <returns>The posts that have a draft</returns>
         Task<IEnumerable<Guid>> GetAllDrafts(Guid blogId);
+
+        /// <summary>
+        /// Gets the comments available for the post with the specified id.
+        /// </summary>
+        /// <param name="postId">The unique post id</param>
+        /// <param name="onlyApproved">If only approved comments should be fetched</param>
+        /// <param name="page">The page number</param>
+        /// <param name="pageSize">The page size</param>
+        /// <returns>The available comments</returns>
+        Task<IEnumerable<Comment>> GetAllComments(Guid? postId, bool onlyApproved,
+            int page, int pageSize);
+
+        /// <summary>
+        /// Gets the pending comments available for the post with the specified id.
+        /// </summary>
+        /// <param name="postId">The unique post id</param>
+        /// <param name="page">The page number</param>
+        /// <param name="pageSize">The page size</param>
+        /// <returns>The available comments</returns>
+        Task<IEnumerable<Comment>> GetAllPendingComments(Guid? postId,
+            int page, int pageSize);
 
         /// <summary>
         /// Gets the post model with the specified id.
@@ -116,6 +139,13 @@ namespace Piranha.Repositories
         Task<Taxonomy> GetTagBySlug(Guid blogId, string slug);
 
         /// <summary>
+        /// Gets the comment with the given id.
+        /// </summary>
+        /// <param name="id">The comment id</param>
+        /// <returns>The model</returns>
+        Task<Comment> GetCommentById(Guid id);
+
+        /// <summary>
         /// Saves the given post model
         /// </summary>
         /// <param name="model">The post model</param>
@@ -126,6 +156,13 @@ namespace Piranha.Repositories
         /// </summary>
         /// <param name="model">The post model</param>
         Task SaveDraft<T>(T model) where T : PostBase;
+
+        /// <summary>
+        /// Saves the comment.
+        /// </summary>
+        /// <param name="postId">The unique post id</param>
+        /// <param name="model">The comment model</param>
+        Task SaveComment(Guid postId, Comment model);
 
         /// <summary>
         /// Creates a revision from the current version
@@ -147,5 +184,11 @@ namespace Piranha.Repositories
         /// </summary>
         /// <param name="id">The unique id</param>
         Task DeleteDraft(Guid id);
+
+        /// <summary>
+        /// Deletes the comment with the specified id.
+        /// </summary>
+        /// <param name="id">The unique id</param>
+        Task DeleteComment(Guid id);
     }
 }

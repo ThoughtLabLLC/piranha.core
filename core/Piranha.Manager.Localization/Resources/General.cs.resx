@@ -18,6 +18,9 @@
   <data name="All" xml:space="preserve">
     <value>Vše</value>
   </data>
+  <data name="An error occurred" xml:space="preserve">
+    <value>Došlo k chybě</value>
+  </data>
   <data name="Cancel" xml:space="preserve">
     <value>Zrušit</value>
   </data>
@@ -218,5 +221,20 @@
   </data>
   <data name="Width" xml:space="preserve">
     <value>Šířka</value>
+  </data>
+  <data name="Archives and Comments" xml:space="preserve">
+    <value>Archivy a komentáře</value>
+  </data>
+  <data name="Author" xml:space="preserve">
+    <value>Autor</value>
+  </data>
+  <data name="Comments" xml:space="preserve">
+    <value>Komentáře</value>
+  </data>
+  <data name="Created" xml:space="preserve">
+    <value>Vytvořeno</value>
+  </data>
+  <data name="Username and/or password are incorrect." xml:space="preserve">
+    <value>Uživatelské jméno a/nebo heslo jsou nesprávné.</value>
   </data>
 </root>

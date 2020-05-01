@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -21,14 +21,7 @@ namespace Piranha.Services
         /// Creates and initializes a new page of the specified type.
         /// </summary>
         /// <returns>The created page</returns>
-        T Create<T>(string typeId = null) where T : Models.PageBase;
-
-        /// <summary>
-        /// Creates and initializes a copy of the given page.
-        /// </summary>
-        /// <param name="originalPage">The orginal page</param>
-        /// <returns>The created copy</returns>
-        T Copy<T>(T originalPage) where T : Models.PageBase;
+        Task<T> CreateAsync<T>(string typeId = null) where T : Models.PageBase;
 
         /// <summary>
         /// Creates and initializes a copy of the given page.
@@ -76,6 +69,29 @@ namespace Piranha.Services
         /// <param name="siteId">The unique site id</param>
         /// <returns>The pages that have a draft</returns>
         Task<IEnumerable<Guid>> GetAllDraftsAsync(Guid? siteId = null);
+
+        /// <summary>
+        /// Gets the comments available for the page with the specified id. If no page id
+        /// is provided all comments are fetched.
+        /// </summary>
+        /// <param name="pageId">The unique page id</param>
+        /// <param name="onlyApproved">If only approved comments should be fetched</param>
+        /// <param name="page">The optional page number</param>
+        /// <param name="pageSize">The optional page size</param>
+        /// <returns>The available comments</returns>
+        Task<IEnumerable<Comment>> GetAllCommentsAsync(Guid? pageId = null, bool onlyApproved = true,
+            int? page = null, int? pageSize = null);
+
+        /// <summary>
+        /// Gets the pending comments available for the page with the specified id. If no page id
+        /// is provided all comments are fetched.
+        /// </summary>
+        /// <param name="pageId">The unique page id</param>
+        /// <param name="page">The optional page number</param>
+        /// <param name="pageSize">The optional page size</param>
+        /// <returns>The available comments</returns>
+        Task<IEnumerable<Comment>> GetAllPendingCommentsAsync(Guid? pageId = null,
+            int? page = null, int? pageSize = null);
 
         /// <summary>
         /// Gets the site startpage.
@@ -134,7 +150,6 @@ namespace Piranha.Services
         /// <summary>
         /// Gets the draft for the page model with the specified id.
         /// </summary>
-        /// <typeparam name="T">The model type</typeparam>
         /// <param name="id">The unique id</param>
         /// <returns>The draft, or null if no draft exists</returns>
         Task<DynamicPage> GetDraftByIdAsync(Guid id);
@@ -157,6 +172,13 @@ namespace Piranha.Services
         Task MoveAsync<T>(T model, Guid? parentId, int sortOrder) where T : Models.PageBase;
 
         /// <summary>
+        /// Gets the comment with the given id.
+        /// </summary>
+        /// <param name="id">The comment id</param>
+        /// <returns>The model</returns>
+        Task<Comment> GetCommentByIdAsync(Guid id);
+
+        /// <summary>
         /// Saves the given page model
         /// </summary>
         /// <param name="model">The page model</param>
@@ -169,6 +191,20 @@ namespace Piranha.Services
         Task SaveDraftAsync<T>(T model) where T : PageBase;
 
         /// <summary>
+        /// Saves the comment.
+        /// </summary>
+        /// <param name="pageId">The unique page id</param>
+        /// <param name="model">The comment model</param>
+        Task SaveCommentAsync(Guid pageId, Comment model);
+
+        /// <summary>
+        /// Saves the comment and verifies if should be approved or not.
+        /// </summary>
+        /// <param name="pageId">The unique page id</param>
+        /// <param name="model">The comment model</param>
+        Task SaveCommentAndVerifyAsync(Guid pageId, Comment model);
+
+        /// <summary>
         /// Deletes the model with the specified id.
         /// </summary>
         /// <param name="id">The unique id</param>
@@ -179,5 +215,17 @@ namespace Piranha.Services
         /// </summary>
         /// <param name="model">The model</param>
         Task DeleteAsync<T>(T model) where T : Models.PageBase;
+
+        /// <summary>
+        /// Deletes the comment with the specified id.
+        /// </summary>
+        /// <param name="id">The unique id</param>
+        Task DeleteCommentAsync(Guid id);
+
+        /// <summary>
+        /// Deletes the given comment.
+        /// </summary>
+        /// <param name="model">The comment</param>
+        Task DeleteCommentAsync(Comment model);
     }
 }

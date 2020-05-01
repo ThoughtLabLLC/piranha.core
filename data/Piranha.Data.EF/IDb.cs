@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -66,9 +66,19 @@ namespace Piranha
         DbSet<Data.PageBlock> PageBlocks { get; set; }
 
         /// <summary>
+        /// Gets/sets the page comments.
+        /// </summary>
+        DbSet<Data.PageComment> PageComments { get; set; }
+
+        /// <summary>
         /// Gets/sets the page field set.
         /// </summary>
         DbSet<Data.PageField> PageFields { get; set; }
+
+        /// <summary>
+        /// Gets/sets the page permission set.
+        /// </summary>
+        DbSet<Data.PagePermission> PagePermissions { get; set; }
 
         /// <summary>
         /// Gets/sets the page revision set.
@@ -96,9 +106,19 @@ namespace Piranha
         DbSet<Data.PostBlock> PostBlocks { get; set; }
 
         /// <summary>
+        /// Gets/sets the post comments.
+        /// </summary>
+        DbSet<Data.PostComment> PostComments { get; set; }
+
+        /// <summary>
         /// Gets/sets the post field set.
         /// </summary>
         DbSet<Data.PostField> PostFields { get; set; }
+
+        /// <summary>
+        /// Gets/sets the post permission set.
+        /// </summary>
+        DbSet<Data.PostPermission> PostPermissions { get; set; }
 
         /// <summary>
         /// Gets/sets the post revision set.

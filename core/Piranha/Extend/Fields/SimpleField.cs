@@ -1,11 +1,11 @@
 ﻿/*
- * Copyright (c) 2016-2018 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
- * 
+ *
  * https://github.com/piranhacms/piranha.core
- * 
+ *
  */
 
 using System;
@@ -30,17 +30,18 @@ namespace Piranha.Extend.Fields
         /// </summary>
         public override string GetTitle()
         {
-            if (Value != null)
+            if (Value == null)
             {
-                var title = Value.ToString();
-
-                if (title.Length > 40)
-                {
-                    title = title.Substring(0, 40) + "...";
-                }
-                return title;
+                return null;
             }
-            return null;
+
+            var title = Value.ToString();
+
+            if (title.Length > 40)
+            {
+                title = title.Substring(0, 40) + "...";
+            }
+            return title;
         }
 
         /// <summary>
@@ -48,7 +49,7 @@ namespace Piranha.Extend.Fields
         /// </summary>
         public override int GetHashCode()
         {
-            return Value != null ? Value.GetHashCode() : 0;
+            return Value.Equals(default(T)) ? 0 : Value.GetHashCode();
         }
 
         /// <summary>
@@ -72,11 +73,7 @@ namespace Piranha.Extend.Fields
         /// <returns>True if the fields are equal</returns>
         public virtual bool Equals(SimpleField<T> obj)
         {
-            if (obj == null)
-            {
-                return false;
-            }
-            return EqualityComparer<T>.Default.Equals(Value, obj.Value);
+            return obj != null && EqualityComparer<T>.Default.Equals(Value, obj.Value);
         }
 
         /// <summary>
@@ -91,7 +88,8 @@ namespace Piranha.Extend.Fields
             {
                 return field1.Equals(field2);
             }
-            else if ((object)field1 == null && (object)field2 == null)
+
+            if ((object)field1 == null && (object)field2 == null)
             {
                 return true;
             }

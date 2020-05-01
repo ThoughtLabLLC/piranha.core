@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2011-2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -14,7 +14,7 @@ using System.Collections.Generic;
 namespace Piranha.Data
 {
     [Serializable]
-    public sealed class Page : RoutedContent<PageField>
+    public sealed class Page : RoutedContentBase<PageField>
     {
         /// <summary>
         /// Gets/sets the page type id.
@@ -68,6 +68,18 @@ namespace Piranha.Data
         public Models.RedirectType RedirectType { get; set; } = Models.RedirectType.Temporary;
 
         /// <summary>
+        /// Gets/sets if comments should be enabled.
+        /// </summary>
+        /// <value></value>
+        public bool EnableComments { get; set; }
+
+        /// <summary>
+        /// Gets/sets after how many days after publish date comments
+        /// should be closed. A value of 0 means never.
+        /// </summary>
+        public int CloseCommentsAfterDays { get; set; }
+
+        /// <summary>
         /// Gets/sets the site.
         /// </summary>
         public Site Site { get; set; }
@@ -86,6 +98,11 @@ namespace Piranha.Data
         /// Gets/sets the available page blocks.
         /// </summary>
         public IList<PageBlock> Blocks { get; set; } = new List<PageBlock>();
+
+        /// <summary>
+        /// Gets/sets the available permissions.
+        /// </summary>
+        public IList<PagePermission> Permissions { get; set; } = new List<PagePermission>();
 
         /// <summary>
         /// Gets/sets the optional page this page is a copy of

@@ -13,9 +13,14 @@ piranha.postedit = new Vue({
         slug: null,
         metaKeywords: null,
         metaDescription: null,
+        excerpt: null,
         published: null,
         redirectUrl: null,
         redirectType: null,
+        enableComments: null,
+        closeCommentsAfterDays: null,
+        commentCount: null,
+        pendingCommentCount: 0,
         state: "new",
         categories: [],
         tags: [],
@@ -23,6 +28,12 @@ piranha.postedit = new Vue({
         regions: [],
         editors: [],
         useBlocks: true,
+        permissions: [],
+        primaryImage: {
+            id: null,
+            media: null
+        },
+        selectedPermissions: [],
         saving: false,
         savingDraft: false,
         selectedRegion: {
@@ -47,6 +58,22 @@ piranha.postedit = new Vue({
                 return item.meta.display === "setting";
             });
         },
+        primaryImageUrl: function () {
+            if (this.primaryImage.media != null) {
+                return piranha.utils.formatUrl(this.primaryImage.media.publicUrl);
+            } else {
+                return piranha.utils.formatUrl("~/manager/assets/img/empty-image.png");
+            }
+        },
+        isExcerptEmpty: function () {
+            return piranha.utils.isEmptyText(this.excerpt);
+        }
+    },
+    mounted() {
+        document.addEventListener("keydown", this.doHotKeys);
+    },
+    beforeDestroy() {
+        document.removeEventListener("keydown", this.doHotKeys);
     },
     methods: {
         bind: function (model) {
@@ -57,9 +84,14 @@ piranha.postedit = new Vue({
             this.slug = model.slug;
             this.metaKeywords = model.metaKeywords;
             this.metaDescription = model.metaDescription;
+            this.excerpt = model.excerpt;
             this.published = model.published;
             this.redirectUrl = model.redirectUrl;
             this.redirectType = model.redirectType;
+            this.enableComments = model.enableComments;
+            this.closeCommentsAfterDays = model.closeCommentsAfterDays;
+            this.commentCount = model.commentCount;
+            this.pendingCommentCount = model.pendingCommentCount;
             this.state = model.state;
             this.blocks = model.blocks;
             this.regions = model.regions;
@@ -71,6 +103,9 @@ piranha.postedit = new Vue({
             this.selectedTags = model.selectedTags;
             this.selectedRoute = model.selectedRoute;
             this.routes = model.routes;
+            this.permissions = model.permissions;
+            this.primaryImage = model.primaryImage;
+            this.selectedPermissions = model.selectedPermissions;
 
             if (!this.useBlocks) {
                 // First choice, select the first custom editor
@@ -106,6 +141,15 @@ piranha.postedit = new Vue({
                 .catch(function (error) { console.log("error:", error );
             });
         },
+        doHotKeys(e)
+        {
+            // CTRL + S
+            if (e.keyCode === 83 && e.ctrlKey)
+            {
+                e.preventDefault();
+                this.saveDraft();
+            }
+        },
         save: function ()
         {
             this.saving = true;
@@ -128,18 +172,25 @@ piranha.postedit = new Vue({
                 id: self.id,
                 blogId: self.blogId,
                 typeId: self.typeId,
+                primaryImage: {
+                    id: self.primaryImage.id
+                },
                 title: self.title,
                 slug: self.slug,
                 metaKeywords: self.metaKeywords,
                 metaDescription: self.metaDescription,
+                excerpt: self.excerpt,
                 published: self.published,
                 redirectUrl: self.redirectUrl,
                 redirectType: self.redirectType,
+                enableComments: self.enableComments,
+                closeCommentsAfterDays: self.closeCommentsAfterDays,
                 blocks: JSON.parse(JSON.stringify(self.blocks)),
                 regions: JSON.parse(JSON.stringify(self.regions)),
                 selectedCategory: self.selectedCategory,
                 selectedTags: JSON.parse(JSON.stringify(self.selectedTags)),
-                selectedRoute: self.selectedRoute
+                selectedRoute: self.selectedRoute,
+                selectedPermissions: self.selectedPermissions
             };
 
             fetch(route, {
@@ -166,6 +217,8 @@ piranha.postedit = new Vue({
 
                 self.saving = false;
                 self.savingDraft = false;
+
+                self.eventBus.$emit("onSaved", self.state)
             })
             .catch(function (error) {
                 console.log("error:", error);
@@ -255,6 +308,40 @@ piranha.postedit = new Vue({
         },
         selectSetting: function (uid) {
             this.selectedSetting = uid;
+        },
+        isCommentsOpen: function () {
+            var date = new Date(this.published);
+            date = date.addDays(this.closeCommentsAfterDays);
+
+            return date > new Date();
+        },
+        commentsClosedDate: function () {
+            var date = new Date(this.published);
+            date = date.addDays(this.closeCommentsAfterDays);
+
+            return date.toDateString();
+        },
+        selectPrimaryImage: function () {
+            if (this.primaryImage.media !== null) {
+                piranha.mediapicker.open(this.updatePrimaryImage, "Image", this.primaryImage.media.folderId);
+            } else {
+                piranha.mediapicker.openCurrentFolder(this.updatePrimaryImage, "Image");
+            }
+        },
+        removePrimaryImage: function () {
+            this.primaryImage.id = null;
+            this.primaryImage.media = null;
+        },
+        updatePrimaryImage: function (media) {
+            if (media.type === "Image") {
+                this.primaryImage.id = media.id;
+                this.primaryImage.media = media;
+            } else {
+                console.log("No image was selected");
+            }
+        },
+        onExcerptBlur: function (e) {
+            this.excerpt = e.target.innerHTML;
         }
     },
     created: function () {

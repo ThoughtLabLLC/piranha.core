@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2017-2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -32,7 +32,7 @@ namespace Piranha.Tests
         [FieldType(Name = "Third")]
         public class MyThirdField : Extend.Fields.SimpleField<string> { }
 
-        private AppFieldList fields = new AppFieldList();
+        private readonly AppFieldList fields = new AppFieldList();
 
         public enum MyEnum {
             Value1,
@@ -278,7 +278,8 @@ namespace Piranha.Tests
 
         [Fact]
         public void ImageFieldConversions() {
-            var media = new Media() {
+            var media = new Media
+            {
                 Id = Guid.NewGuid()
             };
 
@@ -329,7 +330,8 @@ namespace Piranha.Tests
 
         [Fact]
         public void DocumentFieldConversions() {
-            var media = new Media() {
+            var media = new Media
+            {
                 Id = Guid.NewGuid()
             };
 
@@ -380,7 +382,8 @@ namespace Piranha.Tests
 
         [Fact]
         public void VideoFieldConversions() {
-            var media = new Media() {
+            var media = new Media
+            {
                 Id = Guid.NewGuid()
             };
 
@@ -493,7 +496,8 @@ namespace Piranha.Tests
 
         [Fact]
         public void MediaFieldConversions() {
-            var media = new Media() {
+            var media = new Media
+            {
                 Id = Guid.NewGuid()
             };
 
@@ -644,6 +648,10 @@ namespace Piranha.Tests
 
             Piranha.Extend.Fields.NumberField field = number;
             Assert.Equal(number, field.Value);
+
+            int? converted = field;
+            Assert.True(converted.HasValue);
+            Assert.Equal(25, converted.Value);
         }
 
         [Fact]

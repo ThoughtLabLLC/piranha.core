@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -25,18 +25,25 @@ namespace Piranha.Services
         private readonly ISiteService _siteService;
         private readonly IParamService _paramService;
         private readonly ICache _cache;
+        private readonly ISearch _search;
 
         /// <summary>
         /// Default constructor.
         /// </summary>
         /// <param name="repo">The main repository</param>
+        /// <param name="factory">The content facory</param>
+        /// <param name="siteService">The site service</param>
+        /// <param name="paramService">The param service</param>
         /// <param name="cache">The optional model cache</param>
-        public PageService(IPageRepository repo, IContentFactory factory, ISiteService siteService, IParamService paramService, ICache cache = null)
+        /// <param name="search">The optional content search</param>
+        public PageService(IPageRepository repo, IContentFactory factory, ISiteService siteService, IParamService paramService,
+            ICache cache = null, ISearch search = null)
         {
             _repo = repo;
             _factory = factory;
             _siteService = siteService;
             _paramService = paramService;
+            _search = search;
 
             if ((int)App.CacheLevel > 2)
             {
@@ -48,7 +55,7 @@ namespace Piranha.Services
         /// Creates and initializes a new page of the specified type.
         /// </summary>
         /// <returns>The created page</returns>
-        public T Create<T>(string typeId = null) where T : Models.PageBase
+        public async Task<T> CreateAsync<T>(string typeId = null) where T : Models.PageBase
         {
             if (string.IsNullOrEmpty(typeId))
             {
@@ -59,23 +66,16 @@ namespace Piranha.Services
 
             if (type != null)
             {
-                return _factory.Create<T>(type);
+                var model = await _factory.CreateAsync<T>(type).ConfigureAwait(false);
+
+                using (var config = new Config(_paramService))
+                {
+                    model.EnableComments = config.CommentsEnabledForPages;
+                    model.CloseCommentsAfterDays = config.CommentsCloseAfterDays;
+                }
+                return model;
             }
             return null;
-        }
-
-        /// <summary>
-        /// Creates and initializes a copy of the given page.
-        /// </summary>
-        /// <param name="originalPage">The orginal page</param>
-        /// <returns>The created copy</returns>
-        public T Copy<T>(T originalPage) where T : Models.PageBase
-        {
-            var model = Create<T>(originalPage.TypeId);
-            model.OriginalPageId = originalPage.Id;
-            model.Slug = null;
-
-            return model;
         }
 
         /// <summary>
@@ -206,6 +206,35 @@ namespace Piranha.Services
         }
 
         /// <summary>
+        /// Gets the pending comments available for the page with the specified id. If no page id
+        /// is provided all comments are fetched.
+        /// </summary>
+        /// <param name="pageId">The unique page id</param>
+        /// <param name="onlyApproved">If only approved comments should be fetched</param>
+        /// <param name="page">The optional page number</param>
+        /// <param name="pageSize">The optional page size</param>
+        /// <returns>The available comments</returns>
+        public Task<IEnumerable<Comment>> GetAllCommentsAsync(Guid? pageId = null, bool onlyApproved = true,
+            int? page = null, int? pageSize = null)
+        {
+            return GetAllCommentsAsync(pageId, onlyApproved, false, page, pageSize);
+        }
+
+        /// <summary>
+        /// Gets the pending comments available for the page with the specified id. If no page id
+        /// is provided all comments are fetched.
+        /// </summary>
+        /// <param name="pageId">The unique page id</param>
+        /// <param name="page">The optional page number</param>
+        /// <param name="pageSize">The optional page size</param>
+        /// <returns>The available comments</returns>
+        public Task<IEnumerable<Comment>> GetAllPendingCommentsAsync(Guid? pageId = null,
+            int? page = null, int? pageSize = null)
+        {
+            return GetAllCommentsAsync(pageId, false, true, page, pageSize);
+        }
+
+        /// <summary>
         /// Gets the site startpage.
         /// </summary>
         /// <param name="siteId">The optional site id</param>
@@ -236,7 +265,7 @@ namespace Piranha.Services
 
                 if (model != null)
                 {
-                    _factory.Init(model, App.PageTypes.GetById(model.TypeId));
+                    await _factory.InitAsync(model, App.PageTypes.GetById(model.TypeId)).ConfigureAwait(false);
                 }
             }
 
@@ -244,12 +273,12 @@ namespace Piranha.Services
             {
                 model = await _repo.GetStartpage<T>(siteId.Value).ConfigureAwait(false);
 
-                OnLoad(model);
+                await OnLoadAsync(model).ConfigureAwait(false);
             }
 
             if (model != null && model is T)
             {
-                return await MapOriginalAsync<T>((T)model).ConfigureAwait(false);
+                return await MapOriginalAsync((T)model).ConfigureAwait(false);
             }
             return null;
         }
@@ -283,7 +312,7 @@ namespace Piranha.Services
 
                 if (model != null)
                 {
-                    _factory.Init(model, App.PageTypes.GetById(model.TypeId));
+                    await _factory.InitAsync(model, App.PageTypes.GetById(model.TypeId)).ConfigureAwait(false);
                 }
             }
 
@@ -291,12 +320,12 @@ namespace Piranha.Services
             {
                 model = await _repo.GetById<T>(id).ConfigureAwait(false);
 
-                OnLoad(model);
+                await OnLoadAsync(model).ConfigureAwait(false);
             }
 
             if (model != null && model is T)
             {
-                return await MapOriginalAsync<T>((T)model).ConfigureAwait(false);
+                return await MapOriginalAsync((T)model).ConfigureAwait(false);
             }
             return null;
         }
@@ -339,7 +368,7 @@ namespace Piranha.Services
 
                     if (model != null)
                     {
-                        _factory.Init(model, App.PageTypes.GetById(model.TypeId));
+                        await _factory.InitAsync(model, App.PageTypes.GetById(model.TypeId)).ConfigureAwait(false);
                     }
                 }
             }
@@ -348,12 +377,12 @@ namespace Piranha.Services
             {
                 model = await _repo.GetBySlug<T>(slug, siteId.Value).ConfigureAwait(false);
 
-                OnLoad(model);
+                await OnLoadAsync(model).ConfigureAwait(false);
             }
 
             if (model != null && model is T)
             {
-                return await MapOriginalAsync<T>((T)model).ConfigureAwait(false);
+                return await MapOriginalAsync((T)model).ConfigureAwait(false);
             }
             return null;
         }
@@ -386,7 +415,6 @@ namespace Piranha.Services
         /// <summary>
         /// Gets the draft for the page model with the specified id.
         /// </summary>
-        /// <typeparam name="T">The model type</typeparam>
         /// <param name="id">The unique id</param>
         /// <returns>The draft, or null if no draft exists</returns>
         public Task<DynamicPage> GetDraftByIdAsync(Guid id)
@@ -404,7 +432,7 @@ namespace Piranha.Services
         {
             var draft = await _repo.GetDraftById<T>(id).ConfigureAwait(false);
 
-            OnLoad(draft, true);
+            await OnLoadAsync(draft, true).ConfigureAwait(false);
 
             return draft;
         }
@@ -442,6 +470,16 @@ namespace Piranha.Services
         }
 
         /// <summary>
+        /// Gets the comment with the given id.
+        /// </summary>
+        /// <param name="id">The comment id</param>
+        /// <returns>The model</returns>
+        public Task<Comment> GetCommentByIdAsync(Guid id)
+        {
+            return _repo.GetCommentById(id);
+        }
+
+        /// <summary>
         /// Saves the given page model
         /// </summary>
         /// <param name="model">The page model</param>
@@ -457,6 +495,53 @@ namespace Piranha.Services
         public Task SaveDraftAsync<T>(T model) where T : PageBase
         {
             return SaveAsync(model, true);
+        }
+
+        /// <summary>
+        /// Gets the comments available for the page with the specified id.
+        /// </summary>
+        /// <param name="pageId">The unique page id</param>
+        /// <param name="onlyApproved">If only approved comments should be fetched</param>
+        /// <param name="onlyPending">If only pending comments should be fetched</param>
+        /// <param name="page">The optional page number</param>
+        /// <param name="pageSize">The optional page size</param>
+        /// <returns>The available comments</returns>
+        private async Task<IEnumerable<Comment>> GetAllCommentsAsync(Guid? pageId = null, bool onlyApproved = true,
+            bool onlyPending = false, int? page = null, int? pageSize = null)
+        {
+            // Ensure page number
+            if (!page.HasValue)
+            {
+                page = 0;
+            }
+
+            // Ensure page size
+            if (!pageSize.HasValue)
+            {
+                using (var config = new Config(_paramService))
+                {
+                    pageSize = config.CommentsPageSize;
+                }
+            }
+
+            // Get the comments
+            IEnumerable<Comment> comments = null;
+
+            if (onlyPending)
+            {
+                comments = await _repo.GetAllPendingComments(pageId, page.Value, pageSize.Value).ConfigureAwait(false);
+            }
+            else
+            {
+                comments = await _repo.GetAllComments(pageId, onlyApproved, page.Value, pageSize.Value).ConfigureAwait(false);
+            }
+
+            // Execute hook
+            foreach (var comment in comments)
+            {
+                App.Hooks.OnLoad<Comment>(comment);
+            }
+            return comments;
         }
 
         /// <summary>
@@ -558,6 +643,12 @@ namespace Piranha.Services
             // Call after save hook
             App.Hooks.OnAfterSave<PageBase>(model);
 
+            // Update search document
+            if (_search != null)
+            {
+                await _search.SavePageAsync(model);
+            }
+
             // Remove from cache
             await RemoveFromCache(model).ConfigureAwait(false);
 
@@ -578,6 +669,79 @@ namespace Piranha.Services
             if (changeState || affected.Count() > 0)
             {
                 await _siteService.InvalidateSitemapAsync(model.SiteId).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Saves the comment.
+        /// </summary>
+        /// <param name="pageId">The unique page id</param>
+        /// <param name="model">The comment model</param>
+        public Task SaveCommentAsync(Guid pageId, Comment model)
+        {
+            return SaveCommentAsync(pageId, model, false);
+        }
+
+        /// <summary>
+        /// Saves the comment and verifies if should be approved or not.
+        /// </summary>
+        /// <param name="pageId">The unique page id</param>
+        /// <param name="model">The comment model</param>
+        public Task SaveCommentAndVerifyAsync(Guid pageId, Comment model)
+        {
+            return SaveCommentAsync(pageId, model, true);
+        }
+
+        /// <summary>
+        /// Saves the comment.
+        /// </summary>
+        /// <param name="pageId">The unique page id</param>
+        /// <param name="model">The comment model</param>
+        /// <param name="verify">If comment verification should be applied</param>
+        private async Task SaveCommentAsync(Guid pageId, Comment model, bool verify)
+        {
+            // Make sure we have a post
+            var page = await GetByIdAsync<PageInfo>(pageId).ConfigureAwait(false);
+
+            if (page != null)
+            {
+                // Ensure id
+                if (model.Id == Guid.Empty)
+                {
+                    model.Id = Guid.NewGuid();
+                }
+
+                // Ensure created date
+                if (model.Created == DateTime.MinValue)
+                {
+                    model.Created = DateTime.Now;
+                }
+
+                // Validate model
+                var context = new ValidationContext(model);
+                Validator.ValidateObject(model, context, true);
+
+                // Set approved according to config if we should verify
+                if (verify)
+                {
+                    using (var config = new Config(_paramService))
+                    {
+                        model.IsApproved = config.CommentsApprove;
+                    }
+                    App.Hooks.OnValidate<Comment>(model);
+                }
+
+                // Call hooks & save
+                App.Hooks.OnBeforeSave<Comment>(model);
+                await _repo.SaveComment(pageId, model).ConfigureAwait(false);
+                App.Hooks.OnAfterSave<Comment>(model);
+
+                // Invalidate parent post from cache
+                await RemoveFromCache(page).ConfigureAwait(false);
+            }
+            else
+            {
+                throw new ArgumentException($"Could not find page with id { pageId.ToString() }");
             }
         }
 
@@ -606,10 +770,54 @@ namespace Piranha.Services
             await _repo.Delete(model.Id).ConfigureAwait(false);
             App.Hooks.OnAfterDelete<PageBase>(model);
 
+            // Delete search document
+            if (_search != null)
+            {
+                await _search.DeletePageAsync(model);
+            }
+
             // Remove from cache & invalidate sitemap
             await RemoveFromCache(model).ConfigureAwait(false);
 
             await _siteService.InvalidateSitemapAsync(model.SiteId).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Deletes the comment with the specified id.
+        /// </summary>
+        /// <param name="id">The unique id</param>
+        public async Task DeleteCommentAsync(Guid id)
+        {
+            var model = await GetCommentByIdAsync(id).ConfigureAwait(false);
+
+            if (model != null)
+            {
+                await DeleteCommentAsync(model).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Deletes the given comment.
+        /// </summary>
+        /// <param name="model">The comment</param>
+        public async Task DeleteCommentAsync(Comment model)
+        {
+            var page = await GetByIdAsync<PageInfo>(model.ContentId).ConfigureAwait(false);
+
+            if (page != null)
+            {
+                // Call hooks & delete
+                App.Hooks.OnBeforeDelete<Comment>(model);
+                await _repo.DeleteComment(model.Id).ConfigureAwait(false);
+                App.Hooks.OnAfterDelete<Comment>(model);
+
+                // Remove parent post from cache
+                await RemoveFromCache(page).ConfigureAwait(false);
+            }
+            else
+            {
+                throw new ArgumentException($"Could not find page with id { model.ContentId.ToString() }");
+            }
         }
 
         /// <summary>
@@ -641,10 +849,10 @@ namespace Piranha.Services
                 {
                     // Clone the original in case we are caching in system
                     // memory, otherwise we'll destroy the original.
-                    copy = Utils.DeepClone<T>(original);
+                    copy = Utils.DeepClone(original);
 
                     // Initialize all blocks & regions
-                    _factory.Init(copy, App.PageTypes.GetById(copy.TypeId));
+                    await _factory.InitAsync(copy, App.PageTypes.GetById(copy.TypeId)).ConfigureAwait(false);
                 }
 
                 // Now let's move over the fields we want to the
@@ -693,21 +901,21 @@ namespace Piranha.Services
         /// </summary>
         /// <param name="model">The model</param>
         /// <param name="isDraft">If this is a draft</param>
-        private void OnLoad(PageBase model, bool isDraft = false)
+        private async Task OnLoadAsync(PageBase model, bool isDraft = false)
         {
             if (model != null)
             {
                 // Initialize model
-                if (typeof(IDynamicModel).IsAssignableFrom(model.GetType()))
+                if (model is IDynamicContent dynamicModel)
                 {
-                    _factory.InitDynamic((DynamicPage)model, App.PageTypes.GetById(model.TypeId));
+                    await _factory.InitDynamicAsync(dynamicModel, App.PageTypes.GetById(model.TypeId)).ConfigureAwait(false);
                 }
                 else
                 {
-                    _factory.Init(model, App.PageTypes.GetById(model.TypeId));
+                    await _factory.InitAsync(model, App.PageTypes.GetById(model.TypeId)).ConfigureAwait(false);
                 }
 
-                App.Hooks.OnLoad<PageBase>(model);
+                App.Hooks.OnLoad(model);
 
                 // Never cache drafts, dynamic or simple instances
                 if (!isDraft && _cache != null && !(model is DynamicPage))

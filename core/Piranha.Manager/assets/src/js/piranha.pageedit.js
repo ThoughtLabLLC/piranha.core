@@ -21,11 +21,17 @@ piranha.pageedit = new Vue({
         published: null,
         redirectUrl: null,
         redirectType: null,
+        enableComments: null,
+        closeCommentsAfterDays: null,
+        commentCount: null,
+        pendingCommentCount: 0,
         state: "new",
         blocks: [],
         regions: [],
         editors: [],
         useBlocks: true,
+        permissions: [],
+        selectedPermissions: [],
         isCopy: false,
         saving: false,
         savingDraft: false,
@@ -50,6 +56,12 @@ piranha.pageedit = new Vue({
             });
         },
     },
+    mounted() {
+        document.addEventListener("keydown", this.doHotKeys);
+    },
+    beforeDestroy() {
+        document.removeEventListener("keydown", this.doHotKeys);
+    },
     methods: {
         bind: function (model) {
             this.id = model.id;
@@ -67,6 +79,10 @@ piranha.pageedit = new Vue({
             this.published = model.published;
             this.redirectUrl = model.redirectUrl;
             this.redirectType = model.redirectType;
+            this.enableComments = model.enableComments;
+            this.closeCommentsAfterDays = model.closeCommentsAfterDays;
+            this.commentCount = model.commentCount;
+            this.pendingCommentCount = model.pendingCommentCount;
             this.state = model.state;
             this.blocks = model.blocks;
             this.regions = model.regions;
@@ -75,6 +91,8 @@ piranha.pageedit = new Vue({
             this.isCopy = model.isCopy;
             this.selectedRoute = model.selectedRoute;
             this.routes = model.routes;
+            this.permissions = model.permissions;
+            this.selectedPermissions = model.selectedPermissions;
 
             if (!this.useBlocks) {
                 // First choice, select the first custom editor
@@ -138,6 +156,15 @@ piranha.pageedit = new Vue({
                 .catch(function (error) { console.log("error:", error );
             });
         },
+        doHotKeys(e)
+        {
+            // CTRL + S
+            if (e.keyCode === 83 && e.ctrlKey)
+            {
+                e.preventDefault();
+                this.saveDraft();
+            }
+        },
         save: function ()
         {
             this.saving = true;
@@ -172,10 +199,13 @@ piranha.pageedit = new Vue({
                 published: self.published,
                 redirectUrl: self.redirectUrl,
                 redirectType: self.redirectType,
+                enableComments: self.enableComments,
+                closeCommentsAfterDays: self.closeCommentsAfterDays,
                 isCopy: self.isCopy,
                 blocks: JSON.parse(JSON.stringify(self.blocks)),
                 regions: JSON.parse(JSON.stringify(self.regions)),
-                selectedRoute: self.selectedRoute
+                selectedRoute: self.selectedRoute,
+                selectedPermissions: self.selectedPermissions
             };
 
             fetch(route, {
@@ -203,6 +233,8 @@ piranha.pageedit = new Vue({
 
                 self.saving = false;
                 self.savingDraft = false;
+
+                self.eventBus.$emit("onSaved", self.state)
             })
             .catch(function (error) {
                 console.log("error:", error);
@@ -297,6 +329,18 @@ piranha.pageedit = new Vue({
             Vue.nextTick(function () {
                 piranha.editor.refreshMarkdown();
             });
+        },
+        isCommentsOpen: function () {
+            var date = new Date(this.published);
+            date = date.addDays(this.closeCommentsAfterDays);
+
+            return date > new Date();
+        },
+        commentsClosedDate: function () {
+            var date = new Date(this.published);
+            date = date.addDays(this.closeCommentsAfterDays);
+
+            return date.toDateString();
         }
     },
     created: function () {

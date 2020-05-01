@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -9,8 +9,8 @@
  */
 
 using System;
-using System.Reflection;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +19,7 @@ using Piranha;
 using Piranha.AspNetCore.Identity;
 using Piranha.AspNetCore.Identity.Data;
 using Piranha.Manager;
+
 using IDb = Piranha.AspNetCore.Identity.IDb;
 using Module = Piranha.AspNetCore.Identity.Module;
 
@@ -28,6 +29,9 @@ public static class IdentityModuleExtensions
     /// Adds the Piranha identity module.
     /// </summary>
     /// <param name="services">The current service collection</param>
+    /// <param name="dbOptions">Options for configuring the database</param>
+    /// <param name="identityOptions">Optional options for identity</param>
+    /// <param name="cookieOptions">Optional options for cookies</param>
     /// <returns>The services</returns>
     public static IServiceCollection AddPiranhaIdentity<T>(this IServiceCollection services,
         Action<DbContextOptionsBuilder> dbOptions,
@@ -121,6 +125,9 @@ public static class IdentityModuleExtensions
     /// Adds the Piranha identity module.
     /// </summary>
     /// <param name="services">The current service collection</param>
+    /// <param name="dbOptions">Options for configuring the database</param>
+    /// <param name="identityOptions">Optional options for identity</param>
+    /// <param name="cookieOptions">Optional options for cookies</param>
     /// <returns>The services</returns>
     public static IServiceCollection AddPiranhaIdentityWithSeed<T, TSeed>(this IServiceCollection services,
         Action<DbContextOptionsBuilder> dbOptions,
@@ -139,6 +146,9 @@ public static class IdentityModuleExtensions
     /// Adds the Piranha identity module.
     /// </summary>
     /// <param name="services">The current service collection</param>
+    /// <param name="dbOptions">Options for configuring the database</param>
+    /// <param name="identityOptions">Optional options for identity</param>
+    /// <param name="cookieOptions">Optional options for cookies</param>
     /// <returns>The services</returns>
     public static IServiceCollection AddPiranhaIdentityWithSeed<T>(this IServiceCollection services,
         Action<DbContextOptionsBuilder> dbOptions,
@@ -185,5 +195,22 @@ public static class IdentityModuleExtensions
         options.LoginPath = "/manager/login";
         options.AccessDeniedPath = "/manager/login";
         options.SlidingExpiration = true;
+    }
+
+    /// <summary>
+    /// Uses the Piranha identity module.
+    /// </summary>
+    /// <param name="builder">The current application builder</param>
+    /// <returns>The builder</returns>
+    public static IApplicationBuilder UsePiranhaIdentity(this IApplicationBuilder builder)
+    {
+        //
+        // Add the embedded resources
+        //
+        return builder.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new EmbeddedFileProvider(typeof(IdentityModuleExtensions).Assembly, "Piranha.AspNetCore.Identity.assets"),
+            RequestPath = "/manager/identity"
+        });
     }
 }

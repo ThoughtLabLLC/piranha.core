@@ -1,9 +1,18 @@
+/*
+ * Copyright (c) .NET Foundation and Contributors
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license.  See the LICENSE file for details.
+ *
+ * http://github.com/tidyui/coreweb
+ *
+ */
+
 using System;
 using System.IO;
 using System.Threading.Tasks;
 using Piranha;
 using Piranha.Extend.Blocks;
-using Piranha.Services;
 
 namespace RazorWeb
 {
@@ -50,7 +59,7 @@ namespace RazorWeb
                 }
 
                 // Create the start page
-                var startpage = Models.TeaserPage.Create(api);
+                var startpage = await Models.TeaserPage.CreateAsync(api).ConfigureAwait(false);
                 startpage.SiteId = siteId;
                 startpage.Title = "Piranha CMS - Open Source, Cross Platform Asp.NET Core CMS";
                 startpage.NavigationTitle = "Home";
@@ -149,7 +158,7 @@ namespace RazorWeb
                 await api.Pages.SaveAsync(startpage);
 
                 // Features page
-                var featurespage = Models.StandardPage.Create(api);
+                var featurespage = await Models.StandardPage.CreateAsync(api);
                 featurespage.SiteId = siteId;
                 featurespage.Title = "Features";
                 featurespage.Route = "/pagewide";
@@ -211,7 +220,7 @@ namespace RazorWeb
                 await api.Pages.SaveAsync(featurespage);
 
                 // Blog Archive
-                var blogpage = Models.BlogArchive.Create(api);
+                var blogpage = await Models.BlogArchive.CreateAsync(api);
                 blogpage.Id = Guid.NewGuid();
                 blogpage.SiteId = siteId;
                 blogpage.Title = "Blog Archive";
@@ -228,7 +237,7 @@ namespace RazorWeb
                 await api.Pages.SaveAsync(blogpage);
 
                 // Blog Post
-                var blogpost = Models.BlogPost.Create(api);
+                var blogpost = await Models.BlogPost.CreateAsync(api);
                 blogpost.BlogId = blogpage.Id;
                 blogpost.Title = "What is Piranha";
                 blogpost.Category = "Piranha CMS";
@@ -252,8 +261,24 @@ namespace RazorWeb
                 blogpost.Published = DateTime.Now;
                 await api.Posts.SaveAsync(blogpost);
 
+                // Add some comments
+                var comment =  new Piranha.Models.Comment
+                {
+                    Author = "Håkan Edling",
+                    Email = "hakan@tidyui.com",
+                    Url = "http://piranhacms.org",
+                    Body = "Awesome to see that the project is up and running! Now maybe it's time to start customizing it to your needs. You can find a lot of information in the official docs.",
+                    IsApproved = true
+                };
+                await api.Posts.SaveCommentAsync(blogpost.Id, comment);
+
+                comment.Id = Guid.Empty;
+                comment.IsApproved = false;
+
+                await api.Pages.SaveCommentAsync(featurespage.Id, comment);
+
                 // Unpublished Post
-                blogpost = Models.BlogPost.Create(api);
+                blogpost = await Models.BlogPost.CreateAsync(api);
                 blogpost.BlogId = blogpage.Id;
                 blogpost.Title = "What is Piranha unpublished";
                 blogpost.Category = "Piranha CMS";
@@ -277,7 +302,7 @@ namespace RazorWeb
                 await api.Posts.SaveAsync(blogpost);
 
                 // Scheduled Post
-                blogpost = Models.BlogPost.Create(api);
+                blogpost = await Models.BlogPost.CreateAsync(api);
                 blogpost.BlogId = blogpage.Id;
                 blogpost.Title = "What is Piranha scheduled";
                 blogpost.Category = "Another category";

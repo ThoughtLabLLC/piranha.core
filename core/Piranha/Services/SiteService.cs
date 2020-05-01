@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -36,6 +36,7 @@ namespace Piranha.Services
         /// Default constructor.
         /// </summary>
         /// <param name="repo">The main repository</param>
+        /// <param name="factory">The content factory</param>
         /// <param name="cache">The optional model cache</param>
         public SiteService(ISiteRepository repo, IContentFactory factory, ICache cache = null)
         {
@@ -154,7 +155,7 @@ namespace Piranha.Services
         /// <summary>
         /// Gets the default side.
         /// </summary>
-        /// <returns>The modell, or NULL if it doesnt exist</returns>
+        /// <returns>The model, or NULL if it does not exist</returns>
         public async Task<Site> GetDefaultAsync()
         {
             var model = _cache?.Get<Site>($"Site_{Guid.Empty}");
@@ -194,7 +195,7 @@ namespace Piranha.Services
 
                 if (model != null)
                 {
-                    _factory.Init(model, App.SiteTypes.GetById(model.TypeId));
+                    await _factory.InitAsync(model, App.SiteTypes.GetById(model.TypeId));
                 }
             }
 
@@ -202,7 +203,7 @@ namespace Piranha.Services
             {
                 model = await _repo.GetContentById<T>(id).ConfigureAwait(false);
 
-                OnLoadContent(model);
+                await OnLoadContentAsync(model).ConfigureAwait(false);
             }
 
             if (model != null && model is T)
@@ -238,9 +239,9 @@ namespace Piranha.Services
                 {
                     sitemap = await _repo.GetSitemap(id.Value, onlyPublished).ConfigureAwait(false);
 
-                    if (onlyPublished && _cache != null)
+                    if (onlyPublished)
                     {
-                        _cache.Set($"Sitemap_{id}", sitemap);
+                        _cache?.Set($"Sitemap_{id}", sitemap);
                     }
                 }
                 return sitemap;
@@ -298,9 +299,9 @@ namespace Piranha.Services
                     model.IsDefault = true;
             }
             // Call hooks & save
-            App.Hooks.OnBeforeSave<Site>(model);
+            App.Hooks.OnBeforeSave(model);
             await _repo.Save(model).ConfigureAwait(false);
-            App.Hooks.OnAfterSave<Site>(model);
+            App.Hooks.OnAfterSave(model);
 
             // Remove from cache
             RemoveFromCache(model);
@@ -342,7 +343,7 @@ namespace Piranha.Services
         /// Creates and initializes a new site content model of the specified type.
         /// </summary>
         /// <returns>The created site content</returns>
-        public T CreateContent<T>(string typeId = null) where T : Models.SiteContentBase
+        public Task<T> CreateContentAsync<T>(string typeId = null) where T : Models.SiteContentBase
         {
             if (string.IsNullOrEmpty(typeId))
             {
@@ -353,7 +354,7 @@ namespace Piranha.Services
 
             if (type != null)
             {
-                return _factory.Create<T>(type);
+                return _factory.CreateAsync<T>(type);
             }
             return null;
         }
@@ -400,9 +401,9 @@ namespace Piranha.Services
         public async Task DeleteAsync(Site model)
         {
             // Call hooks & delete
-            App.Hooks.OnBeforeDelete<Site>(model);
+            App.Hooks.OnBeforeDelete(model);
             await _repo.Delete(model.Id).ConfigureAwait(false);
-            App.Hooks.OnAfterDelete<Site>(model);
+            App.Hooks.OnAfterDelete(model);
 
             // Remove from cache
             RemoveFromCache(model);
@@ -433,7 +434,7 @@ namespace Piranha.Services
         {
             if (model != null)
             {
-                App.Hooks.OnLoad<Site>(model);
+                App.Hooks.OnLoad(model);
 
                 if (_cache != null)
                 {
@@ -451,21 +452,21 @@ namespace Piranha.Services
         /// Processes the model on load.
         /// </summary>
         /// <param name="model">The model</param>
-        private void OnLoadContent(Models.SiteContentBase model)
+        private async Task OnLoadContentAsync(Models.SiteContentBase model)
         {
             if (model != null)
             {
                 // Initialize model
-                if (typeof(Models.IDynamicModel).IsAssignableFrom(model.GetType()))
+                if (model is IDynamicContent dynamicModel)
                 {
-                    _factory.InitDynamic((Models.DynamicSiteContent)model, App.SiteTypes.GetById(model.TypeId));
+                    await _factory.InitDynamicAsync(dynamicModel, App.SiteTypes.GetById(model.TypeId));
                 }
                 else
                 {
-                    _factory.Init(model, App.SiteTypes.GetById(model.TypeId));
+                    await _factory.InitAsync(model, App.SiteTypes.GetById(model.TypeId));
                 }
 
-                App.Hooks.OnLoad<Models.SiteContentBase>(model);
+                App.Hooks.OnLoad(model);
 
                 if (_cache != null && !(model is DynamicSiteContent))
                 {

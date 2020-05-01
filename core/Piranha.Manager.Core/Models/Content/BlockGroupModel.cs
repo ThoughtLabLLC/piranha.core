@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -31,7 +31,7 @@ namespace Piranha.Manager.Models.Content
         /// <summary>
         /// Gets/sets the available child items in the group.
         /// </summary>
-        public IList<BlockItemModel> Items { get; set; } = new List<BlockItemModel>();
+        public IList<BlockModel> Items { get; set; } = new List<BlockModel>();
 
         /// <summary>
         /// Gets/sets the available global group fields.

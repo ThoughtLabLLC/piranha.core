@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -8,19 +8,14 @@
  *
  */
 
-using Piranha.Extend;
 using Piranha.Runtime;
-using Piranha.Services;
-using System;
-using System.Linq;
-using System.Text;
 using Xunit;
 
 namespace Piranha.Tests
 {
     public class MediaMgr : BaseTests
     {
-        private MediaManager mgr = new MediaManager();
+        private readonly MediaManager mgr = new MediaManager();
 
         /// <summary>
         /// Sets up & initializes the tests.

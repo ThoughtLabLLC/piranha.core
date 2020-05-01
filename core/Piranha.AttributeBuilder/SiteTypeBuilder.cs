@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2018-2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -14,10 +14,12 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Piranha.Models;
-using Piranha.Services;
 
 namespace Piranha.AttributeBuilder
 {
+    /// <summary>
+    /// Class for building and importing site types.
+    /// </summary>
     public class SiteTypeBuilder : ContentTypeBuilder<SiteTypeBuilder, SiteType>
     {
         private readonly IApi _api;
@@ -36,16 +38,12 @@ namespace Piranha.AttributeBuilder
         /// </summary>
         public override async Task<SiteTypeBuilder> BuildAsync()
         {
-            foreach (var type in _types)
+            foreach (var siteType in _types.Select(GetContentType).Where(siteType => siteType != null))
             {
-                var siteType = GetContentType(type);
-
-                if (siteType != null)
-                {
-                    siteType.Ensure();
-                    await _api.SiteTypes.SaveAsync(siteType);
-                }
+                siteType.Ensure();
+                await _api.SiteTypes.SaveAsync(siteType);
             }
+
             return this;
         }
 
@@ -66,24 +64,12 @@ namespace Piranha.AttributeBuilder
         /// <returns>The builder</returns>
         public async Task<SiteTypeBuilder> DeleteOrphansAsync()
         {
-            var orphans = new List<SiteType>();
-            var importTypes = new List<SiteType>();
+            var importTypes = _types.Select(GetContentType).Where(importType => importType != null).ToList();
 
             // Get all site types added for import.
-            foreach (var type in _types)
-            {
-                var importType = GetContentType(type);
-
-                if (importType != null)
-                    importTypes.Add(importType);
-            }
 
             // Get all previously imported page types.
-            foreach (var siteType in await _api.SiteTypes.GetAllAsync())
-            {
-                if (!importTypes.Any(t => t.Id == siteType.Id))
-                    orphans.Add(siteType);
-            }
+            var orphans = (await _api.SiteTypes.GetAllAsync()).Where(siteType => importTypes.All(t => t.Id != siteType.Id)).ToList();
 
             // Delete all orphans.
             foreach (var siteType in orphans)

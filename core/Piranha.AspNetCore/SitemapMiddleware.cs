@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -20,22 +20,31 @@ namespace Piranha.AspNetCore
 {
     public class SitemapMiddleware : MiddlewareBase
     {
+        private readonly PiranhaRouteConfig _config;
+
         /// <summary>
         /// Creates a new middleware instance.
         /// </summary>
         /// <param name="next">The next middleware in the pipeline</param>
         /// <param name="factory">The logger factory</param>
-        public SitemapMiddleware(RequestDelegate next, ILoggerFactory factory = null) : base(next, factory) { }
+        /// <param name="config">The optional route config</param>
+        public SitemapMiddleware(RequestDelegate next, ILoggerFactory factory = null, PiranhaRouteConfig config = null) : base(next, factory)
+        {
+            _config = config;
+        }
 
         /// <summary>
         /// Invokes the middleware.
         /// </summary>
         /// <param name="context">The current http context</param>
         /// <param name="api">The current api</param>
+        /// <param name="service">The application service</param>
         /// <returns>An async task</returns>
         public override async Task Invoke(HttpContext context, IApi api, IApplicationService service)
         {
-            if (!IsHandled(context) && !context.Request.Path.Value.StartsWith("/manager/assets/"))
+            var useSitemapRouting = _config != null ? _config.UseSitemapRouting : true;
+
+            if (useSitemapRouting && !IsHandled(context) && !context.Request.Path.Value.StartsWith("/manager/assets/"))
             {
                 var url = context.Request.Path.HasValue ? context.Request.Path.Value : "";
                 var host = context.Request.Host.Host;
@@ -53,15 +62,24 @@ namespace Piranha.AspNetCore
                     // Get the sitemap for the site
                     var pages = await api.Sites.GetSitemapAsync(siteId);
 
+                    if (App.Hooks.OnGenerateSitemap != null)
+                    {
+                        // We need to clone the sitemap as it might be cached
+                        // if we're going to modify it.
+                        pages = App.Hooks.OnGenerateSitemap(Utils.DeepClone(pages));
+                    }
+
                     // Generate sitemap.xml
                     var sitemap = new Sitemap();
 
                     foreach (var page in pages)
                     {
-                        var urls = await GetPageUrlsAsync(api, page, baseUrl);
+                        var urls = await GetPageUrlsAsync(api, page, baseUrl).ConfigureAwait(false);
 
                         if (urls.Count > 0)
+                        {
                             sitemap.AddRange(urls);
+                        }
                     }
                     context.Response.ContentType = "application/xml";
                     await context.Response.WriteAsync(sitemap.ToXml());

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -49,10 +49,26 @@ namespace Piranha.Manager.Models
             public bool IsPermanent { get; set; }
         }
 
+        public class SiteItem
+        {
+            public Guid Id { get; set; }
+            public string Title { get; set; }
+        }
+
         /// <summary>
         /// Gets/sets the current site id.
         /// </summary>
         public Guid SiteId { get; set; }
+
+        /// <summary>
+        /// Gets/sets the current site title.
+        /// </summary>
+        public string SiteTitle { get; set; }
+
+        /// <summary>
+        /// Gets/sets the available sites.
+        /// </summary>
+        public IList<SiteItem> Sites { get; set; } = new List<SiteItem>();
 
         /// <summary>
         /// Gets/sets the available items.

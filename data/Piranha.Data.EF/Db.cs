@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -14,7 +14,7 @@ using System.Linq;
 
 namespace Piranha
 {
-    public sealed class Db : DbContext, IDb
+    public abstract class Db<T> : DbContext, IDb where T : Db<T>
     {
         /// <summary>
         /// Gets/sets whether the db context as been initialized. This
@@ -25,7 +25,7 @@ namespace Piranha
         /// <summary>
         /// The object mutext used for initializing the context.
         /// </summary>
-        private static object Mutex = new object();
+        private static readonly object Mutex = new object();
 
         /// <summary>
         /// Gets/sets the alias set.
@@ -73,9 +73,19 @@ namespace Piranha
         public DbSet<Data.PageBlock> PageBlocks { get; set; }
 
         /// <summary>
+        /// Gets/sets the page comments.
+        /// </summary>
+        public DbSet<Data.PageComment> PageComments { get; set; }
+
+        /// <summary>
         /// Gets/sets the page field set.
         /// </summary>
         public DbSet<Data.PageField> PageFields { get; set; }
+
+        /// <summary>
+        /// Gets/sets the page permission set.
+        /// </summary>
+        public DbSet<Data.PagePermission> PagePermissions { get; set; }
 
         /// <summary>
         /// Gets/sets the page revision set.
@@ -103,9 +113,19 @@ namespace Piranha
         public DbSet<Data.PostBlock> PostBlocks { get; set; }
 
         /// <summary>
+        /// Gets/sets the post comments.
+        /// </summary>
+        public DbSet<Data.PostComment> PostComments { get; set; }
+
+        /// <summary>
         /// Gets/sets the post field set.
         /// </summary>
         public DbSet<Data.PostField> PostFields { get; set; }
+
+        /// <summary>
+        /// Gets/sets the post permission set.
+        /// </summary>
+        public DbSet<Data.PostPermission> PostPermissions { get; set; }
 
         /// <summary>
         /// Gets/sets the post revision set.
@@ -146,7 +166,7 @@ namespace Piranha
         /// Default constructor.
         /// </summary>
         /// <param name="options">Configuration options</param>
-        public Db(DbContextOptions<Db> options) : base(options)
+        public Db(DbContextOptions<T> options) : base(options)
         {
             if (!IsInitialized)
             {
@@ -193,9 +213,13 @@ namespace Piranha
             mb.Entity<Data.Media>().ToTable("Piranha_Media");
             mb.Entity<Data.Media>().Property(m => m.Filename).HasMaxLength(128).IsRequired();
             mb.Entity<Data.Media>().Property(m => m.ContentType).HasMaxLength(256).IsRequired();
+            mb.Entity<Data.Media>().Property(m => m.Title).HasMaxLength(128);
+            mb.Entity<Data.Media>().Property(m => m.AltText).HasMaxLength(128);
+            mb.Entity<Data.Media>().Property(m => m.Description).HasMaxLength(512);
 
             mb.Entity<Data.MediaFolder>().ToTable("Piranha_MediaFolders");
             mb.Entity<Data.MediaFolder>().Property(f => f.Name).HasMaxLength(128).IsRequired();
+            mb.Entity<Data.MediaFolder>().Property(f => f.Description).HasMaxLength(512);
 
             mb.Entity<Data.MediaVersion>().ToTable("Piranha_MediaVersions");
             mb.Entity<Data.MediaVersion>().Property(v => v.FileExtension).HasMaxLength(8);
@@ -211,16 +235,26 @@ namespace Piranha
             mb.Entity<Data.Page>().Property(p => p.MetaDescription).HasMaxLength(256);
             mb.Entity<Data.Page>().Property(p => p.Route).HasMaxLength(256);
             mb.Entity<Data.Page>().Property(p => p.RedirectUrl).HasMaxLength(256);
+            mb.Entity<Data.Page>().Property(p => p.EnableComments).HasDefaultValue(false);
             mb.Entity<Data.Page>().HasIndex(p => new { p.SiteId, p.Slug }).IsUnique();
 
             mb.Entity<Data.PageBlock>().ToTable("Piranha_PageBlocks");
             mb.Entity<Data.PageBlock>().HasIndex(b => new { b.PageId, b.SortOrder }).IsUnique();
+
+            mb.Entity<Data.PageComment>().ToTable("Piranha_PageComments");
+            mb.Entity<Data.PostComment>().Property(c => c.UserId).HasMaxLength(128);
+            mb.Entity<Data.PageComment>().Property(c => c.Author).HasMaxLength(128).IsRequired();
+            mb.Entity<Data.PageComment>().Property(c => c.Email).HasMaxLength(128).IsRequired();
+            mb.Entity<Data.PageComment>().Property(c => c.Url).HasMaxLength(256);
 
             mb.Entity<Data.PageField>().ToTable("Piranha_PageFields");
             mb.Entity<Data.PageField>().Property(f => f.RegionId).HasMaxLength(64).IsRequired();
             mb.Entity<Data.PageField>().Property(f => f.FieldId).HasMaxLength(64).IsRequired();
             mb.Entity<Data.PageField>().Property(f => f.CLRType).HasMaxLength(256).IsRequired();
             mb.Entity<Data.PageField>().HasIndex(f => new { f.PageId, f.RegionId, f.FieldId, f.SortOrder });
+
+            mb.Entity<Data.PagePermission>().ToTable("Piranha_PagePermissions");
+            mb.Entity<Data.PagePermission>().HasKey(p => new { p.PageId, p.Permission });
 
             mb.Entity<Data.PageRevision>().ToTable("Piranha_PageRevisions");
 
@@ -241,17 +275,27 @@ namespace Piranha
             mb.Entity<Data.Post>().Property(p => p.MetaDescription).HasMaxLength(256);
             mb.Entity<Data.Post>().Property(p => p.Route).HasMaxLength(256);
             mb.Entity<Data.Post>().Property(p => p.RedirectUrl).HasMaxLength(256);
+            mb.Entity<Data.Post>().Property(p => p.EnableComments).HasDefaultValue(true);
             mb.Entity<Data.Post>().HasOne(p => p.Category).WithMany().IsRequired().OnDelete(DeleteBehavior.Restrict);
             mb.Entity<Data.Post>().HasIndex(p => new { p.BlogId, p.Slug }).IsUnique();
 
             mb.Entity<Data.PostBlock>().ToTable("Piranha_PostBlocks");
             mb.Entity<Data.PostBlock>().HasIndex(b => new { b.PostId, b.SortOrder }).IsUnique();
 
+            mb.Entity<Data.PostComment>().ToTable("Piranha_PostComments");
+            mb.Entity<Data.PostComment>().Property(c => c.UserId).HasMaxLength(128);
+            mb.Entity<Data.PostComment>().Property(c => c.Author).HasMaxLength(128).IsRequired();
+            mb.Entity<Data.PostComment>().Property(c => c.Email).HasMaxLength(128).IsRequired();
+            mb.Entity<Data.PostComment>().Property(c => c.Url).HasMaxLength(256);
+
             mb.Entity<Data.PostField>().ToTable("Piranha_PostFields");
             mb.Entity<Data.PostField>().Property(f => f.RegionId).HasMaxLength(64).IsRequired();
             mb.Entity<Data.PostField>().Property(f => f.FieldId).HasMaxLength(64).IsRequired();
             mb.Entity<Data.PostField>().Property(f => f.CLRType).HasMaxLength(256).IsRequired();
             mb.Entity<Data.PostField>().HasIndex(f => new { f.PostId, f.RegionId, f.FieldId, f.SortOrder });
+
+            mb.Entity<Data.PostPermission>().ToTable("Piranha_PostPermissions");
+            mb.Entity<Data.PostPermission>().HasKey(p => new { p.PostId, p.Permission });
 
             mb.Entity<Data.PostRevision>().ToTable("Piranha_PostRevisions");
 

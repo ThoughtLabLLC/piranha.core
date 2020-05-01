@@ -14,6 +14,12 @@
     &.active {
         overflow: visible !important;
     }
+
+    &.card-sm {
+        .card-body {
+            padding: .5rem;
+        }
+    }
 }
 
 .bg-light {
@@ -25,6 +31,20 @@
         .card-body {
             border: solid 2px $white;
             border-radius: 0;
+        }
+    }
+}
+
+#config {
+    .card-body {
+        padding: 0;
+
+        .list-group {
+            padding: .75rem 0;
+
+            .list-group-item {
+                border-color: $body-bg;
+            }
         }
     }
 }

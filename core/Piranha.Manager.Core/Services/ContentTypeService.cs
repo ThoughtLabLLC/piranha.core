@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -11,7 +11,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using System.Threading.Tasks;
 using Piranha.Models;
 using Piranha.Manager.Models;
 using Piranha.Manager.Models.Content;
@@ -110,13 +110,13 @@ namespace Piranha.Manager.Services
         /// <param name="type">The type id</param>
         /// <param name="region">The region id</param>
         /// <returns>The new region item</returns>
-        public RegionItemModel CreatePageRegion(string type, string region)
+        public Task<RegionItemModel> CreatePageRegionAsync(string type, string region)
         {
             var pageType = App.PageTypes.GetById(type);
 
             if (pageType != null)
             {
-                return CreateRegion(pageType, region);
+                return CreateRegionAsync(pageType, region);
             }
             return null;
         }
@@ -127,13 +127,13 @@ namespace Piranha.Manager.Services
         /// <param name="type">The type id</param>
         /// <param name="region">The region id</param>
         /// <returns>The new region item</returns>
-        public RegionItemModel CreatePostRegion(string type, string region)
+        public Task<RegionItemModel> CreatePostRegionAsync(string type, string region)
         {
             var postType = App.PostTypes.GetById(type);
 
             if (postType != null)
             {
-                return CreateRegion(postType, region);
+                return CreateRegionAsync(postType, region);
             }
             return null;
         }
@@ -144,13 +144,13 @@ namespace Piranha.Manager.Services
         /// <param name="type">The type id</param>
         /// <param name="region">The region id</param>
         /// <returns>The new region item</returns>
-        public RegionItemModel CreateSiteRegion(string type, string region)
+        public Task<RegionItemModel> CreateSiteRegionAsync(string type, string region)
         {
             var siteType = App.SiteTypes.GetById(type);
 
             if (siteType != null)
             {
-                return CreateRegion(siteType, region);
+                return CreateRegionAsync(siteType, region);
             }
             return null;
         }
@@ -161,11 +161,14 @@ namespace Piranha.Manager.Services
         /// <param name="type">The content type</param>
         /// <param name="region">The region id</param>
         /// <returns>The new region item</returns>
-        private RegionItemModel CreateRegion(ContentType type, string region)
+        private async Task<RegionItemModel> CreateRegionAsync(ContentTypeBase type, string region)
         {
             var regionType = type.Regions.First(r => r.Id == region);
-            var regionModel = _factory.CreateDynamicRegion(type, region);
-            var regionItem = new RegionItemModel();
+            var regionModel = await _factory.CreateDynamicRegionAsync(type, region);
+            var regionItem = new RegionItemModel
+            {
+                Title = regionType.ListTitlePlaceholder ?? "..."
+            };
 
             foreach (var fieldType in regionType.Fields)
             {
@@ -183,6 +186,8 @@ namespace Piranha.Manager.Services
                         Description = fieldType.Description
                     }
                 };
+
+                PopulateFieldOptions(appFieldType, field);
 
                 if (regionType.Fields.Count > 1)
                 {
@@ -204,13 +209,13 @@ namespace Piranha.Manager.Services
         /// </summary>
         /// <param name="type">The block type</param>
         /// <returns>The new block</returns>
-        public AsyncResult<BlockModel> CreateBlock(string type)
+        public async Task<AsyncResult<BlockModel>> CreateBlockAsync(string type)
         {
             var blockType = App.Blocks.GetByType(type);
 
             if (blockType != null)
             {
-                var block = (Extend.Block)_factory.CreateBlock(type);
+                var block = (Extend.Block)(await _factory.CreateBlockAsync(type));
 
                 if (block is Extend.BlockGroup)
                 {
@@ -233,52 +238,7 @@ namespace Piranha.Manager.Services
                             "block-group-horizontal" : "block-group-vertical";
                     }
 
-                    foreach (var prop in block.GetType().GetProperties(App.PropertyBindings))
-                    {
-                        if (typeof(Extend.IField).IsAssignableFrom(prop.PropertyType))
-                        {
-                            var fieldType = App.Fields.GetByType(prop.PropertyType);
-
-                            // Create the block field
-                            var field = new FieldModel
-                            {
-                                Model = (Extend.IField)prop.GetValue(block),
-                                Meta = new FieldMeta
-                                {
-                                    Id = prop.Name,
-                                    Name = prop.Name,
-                                    Component = fieldType.Component,
-                                }
-                            };
-
-                            // Check if this is a select field
-                            if (typeof(Extend.Fields.SelectFieldBase).IsAssignableFrom(fieldType.Type))
-                            {
-                                foreach(var selectItem in ((Extend.Fields.SelectFieldBase)Activator.CreateInstance(fieldType.Type)).Items)
-                                {
-                                    field.Meta.Options.Add(Convert.ToInt32(selectItem.Value), selectItem.Title);
-                                }
-                            }
-
-                            // Check if we have field meta-data available
-                            var attr = prop.GetCustomAttribute<Extend.FieldAttribute>();
-                            if (attr != null)
-                            {
-                                field.Meta.Name = !string.IsNullOrWhiteSpace(attr.Title) ? attr.Title : field.Meta.Name;
-                                field.Meta.Placeholder = attr.Placeholder;
-                                field.Meta.IsHalfWidth = attr.Options.HasFlag(FieldOption.HalfWidth);
-                            }
-
-                            // Check if we have field description meta-data available
-                            var descAttr = prop.GetCustomAttribute<Extend.FieldDescriptionAttribute>();
-                            if (descAttr != null)
-                            {
-                                field.Meta.Description = descAttr.Text;
-                            }
-
-                            item.Fields.Add(field);
-                        }
-                    }
+                    item.Fields = ContentUtils.GetBlockFields(block);
 
                     return new AsyncResult<BlockModel>
                     {
@@ -287,23 +247,63 @@ namespace Piranha.Manager.Services
                 }
                 else
                 {
-                    return new AsyncResult<BlockModel>
+                    if (!blockType.IsGeneric)
                     {
-                        Body = new BlockItemModel
+                        // Regular block model
+                        return new AsyncResult<BlockModel>
                         {
-                            Model = block,
-                            Meta = new BlockMeta
+                            Body = new BlockItemModel
                             {
-                                Name = blockType.Name,
-                                Title = block.GetTitle(),
-                                Icon = blockType.Icon,
-                                Component = blockType.Component
+                                Model = block,
+                                Meta = new BlockMeta
+                                {
+                                    Name = blockType.Name,
+                                    Title = block.GetTitle(),
+                                    Icon = blockType.Icon,
+                                    Component = blockType.Component
+                                }
                             }
-                        }
-                    };
+                        };
+                    }
+                    else
+                    {
+                        // Generic block model
+                        return new AsyncResult<BlockModel>
+                        {
+                            Body = new BlockGenericModel
+                            {
+                                Model = ContentUtils.GetBlockFields(block),
+                                Type = block.Type,
+                                Meta = new BlockMeta
+                                {
+                                    Name = blockType.Name,
+                                    Title = block.GetTitle(),
+                                    Icon = blockType.Icon,
+                                    Component = blockType.Component
+                                }
+                            }
+                        };
+                    }
                 }
             }
             return null;
+        }
+
+        /// <summary>
+        /// Adds options to field's meta if required
+        /// </summary>
+        /// <param name="fieldType">Type of field</param>
+        /// <param name="fieldModel">Field model</param>
+        private void PopulateFieldOptions(Runtime.AppField fieldType, FieldModel fieldModel)
+        {
+            // Check if this is a select field
+            if (typeof(Extend.Fields.SelectFieldBase).IsAssignableFrom(fieldType.Type))
+            {
+                foreach (var selectItem in ((Extend.Fields.SelectFieldBase)Activator.CreateInstance(fieldType.Type)).Items)
+                {
+                    fieldModel.Meta.Options.Add(Convert.ToInt32(selectItem.Value), selectItem.Title);
+                }
+            }
         }
     }
 }

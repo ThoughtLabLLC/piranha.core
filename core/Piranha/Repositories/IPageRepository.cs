@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2016-2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -38,6 +38,28 @@ namespace Piranha.Repositories
         /// <param name="siteId">The unique site id</param>
         /// <returns>The pages that have a draft</returns>
         Task<IEnumerable<Guid>> GetAllDrafts(Guid siteId);
+
+        /// <summary>
+        /// Gets the comments available for the page with the specified id. If no page id
+        /// is provided all comments are fetched.
+        /// </summary>
+        /// <param name="pageId">The unique page id</param>
+        /// <param name="onlyApproved">If only approved comments should be fetched</param>
+        /// <param name="page">The page number</param>
+        /// <param name="pageSize">The page size</param>
+        /// <returns>The available comments</returns>
+        Task<IEnumerable<Comment>> GetAllComments(Guid? pageId, bool onlyApproved,
+            int page, int pageSize);
+
+        /// <summary>
+        /// Gets the pending comments available for the page with the specified id.
+        /// </summary>
+        /// <param name="pageId">The unique page id</param>
+        /// <param name="page">The page number</param>
+        /// <param name="pageSize">The page size</param>
+        /// <returns>The available comments</returns>
+        Task<IEnumerable<Comment>> GetAllPendingComments(Guid? pageId,
+            int page, int pageSize);
 
         /// <summary>
         /// Gets the site startpage.
@@ -83,6 +105,13 @@ namespace Piranha.Repositories
         Task<IEnumerable<Guid>> Move<T>(T model, Guid? parentId, int sortOrder) where T : PageBase;
 
         /// <summary>
+        /// Gets the comment with the given id.
+        /// </summary>
+        /// <param name="id">The comment id</param>
+        /// <returns>The model</returns>
+        Task<Comment> GetCommentById(Guid id);
+
+        /// <summary>
         /// Saves the given page model
         /// </summary>
         /// <param name="model">The page model</param>
@@ -94,6 +123,13 @@ namespace Piranha.Repositories
         /// </summary>
         /// <param name="model">The page model</param>
         Task SaveDraft<T>(T model) where T : PageBase;
+
+        /// <summary>
+        /// Saves the comment.
+        /// </summary>
+        /// <param name="pageId">The unique page id</param>
+        /// <param name="model">The comment model</param>
+        Task SaveComment(Guid pageId, Comment model);
 
         /// <summary>
         /// Creates a revision from the current version
@@ -116,5 +152,11 @@ namespace Piranha.Repositories
         /// </summary>
         /// <param name="id">The unique id</param>
         Task DeleteDraft(Guid id);
+
+        /// <summary>
+        /// Deletes the comment with the specified id.
+        /// </summary>
+        /// <param name="id">The unique id</param>
+        Task DeleteComment(Guid id);
     }
 }

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -26,7 +26,8 @@ namespace Piranha.Services
         /// <summary>
         /// Default constructor.
         /// </summary>
-        /// <param name="db">The current db context</param>
+        /// <param name="repo">The main repository</param>
+        /// <param name="siteService">The site service</param>
         /// <param name="cache">The optional model cache</param>
         public AliasService(IAliasRepository repo, ISiteService siteService, ICache cache = null)
         {
@@ -177,9 +178,9 @@ namespace Piranha.Services
             }
 
             // Call hooks & save
-            App.Hooks.OnBeforeSave<Alias>(model);
+            App.Hooks.OnBeforeSave(model);
             await _repo.Save(model).ConfigureAwait(false);
-            App.Hooks.OnAfterSave<Alias>(model);
+            App.Hooks.OnAfterSave(model);
 
             // Remove from cache
             RemoveFromCache(model);
@@ -206,9 +207,9 @@ namespace Piranha.Services
         public async Task DeleteAsync(Alias model)
         {
             // Call hooks & delete
-            App.Hooks.OnBeforeDelete<Alias>(model);
+            App.Hooks.OnBeforeDelete(model);
             await _repo.Delete(model.Id).ConfigureAwait(false);
-            App.Hooks.OnAfterDelete<Alias>(model);
+            App.Hooks.OnAfterDelete(model);
 
             // Remove from cache
             RemoveFromCache(model);
@@ -222,7 +223,7 @@ namespace Piranha.Services
         {
             if (model != null)
             {
-                App.Hooks.OnLoad<Alias>(model);
+                App.Hooks.OnLoad(model);
 
                 if (_cache != null)
                 {

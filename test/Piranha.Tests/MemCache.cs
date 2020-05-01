@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2017 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
- * 
+ *
  * http://github.com/piranhacms/piranha
- * 
+ *
  */
 
 using System;
@@ -15,14 +15,14 @@ namespace Piranha.Tests
 {
     public class MemCache
     {
-        private Piranha.Cache.SimpleCache cache;
-        private string id1 = Guid.NewGuid().ToString();
-        private string id2 = Guid.NewGuid().ToString();
-        private string id3 = Guid.NewGuid().ToString();
-        private string val1 = "My first value";
-        private string val2 = "My second value";
-        private string val3 = "My third value";
-        private string val4 = "My fourth value";
+        private readonly Piranha.Cache.SimpleCache cache;
+        private readonly string id1 = Guid.NewGuid().ToString();
+        private readonly string id2 = Guid.NewGuid().ToString();
+        private readonly string id3 = Guid.NewGuid().ToString();
+        private readonly string val1 = "My first value";
+        private readonly string val2 = "My second value";
+        private readonly string val3 = "My third value";
+        private readonly string val4 = "My fourth value";
 
         /// <summary>
         /// Initializes the test class.

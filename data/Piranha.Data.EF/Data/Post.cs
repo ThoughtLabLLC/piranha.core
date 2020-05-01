@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2011-2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -14,7 +14,7 @@ using System.Collections.Generic;
 namespace Piranha.Data
 {
     [Serializable]
-    public sealed class Post : RoutedContent<PostField>
+    public sealed class Post : RoutedContentBase<PostField>
     {
         /// <summary>
         /// Gets/sets the post type id.
@@ -33,6 +33,16 @@ namespace Piranha.Data
         public Guid CategoryId { get; set; }
 
         /// <summary>
+        /// Gets/sets the optional primary image id.
+        /// </summary>
+        public Guid? PrimaryImageId { get; set; }
+
+        /// <summary>
+        /// Gets/sets the optional excerpt.
+        /// </summary>
+        public string Excerpt { get; set; }
+
+        /// <summary>
         /// Gets/sets the optional redirect.
         /// </summary>
         /// <returns></returns>
@@ -43,6 +53,18 @@ namespace Piranha.Data
         /// </summary>
         /// <returns></returns>
         public Models.RedirectType RedirectType { get; set; }
+
+        /// <summary>
+        /// Gets/sets if comments should be enabled.
+        /// </summary>
+        /// <value></value>
+        public bool EnableComments { get; set; }
+
+        /// <summary>
+        /// Gets/sets after how many days after publish date comments
+        /// should be closed. A value of 0 means never.
+        /// </summary>
+        public int CloseCommentsAfterDays { get; set; }
 
         /// <summary>
         /// Gets/sets the associated post type.
@@ -68,5 +90,10 @@ namespace Piranha.Data
         /// Gets/sets the available post blocks.
         /// </summary>
         public IList<PostBlock> Blocks { get; set; } = new List<PostBlock>();
+
+        /// <summary>
+        /// Gets/sets the available permissions.
+        /// </summary>
+        public IList<PostPermission> Permissions { get; set; } = new List<PostPermission>();
     }
 }

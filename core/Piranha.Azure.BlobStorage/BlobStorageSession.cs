@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -21,7 +21,7 @@ namespace Piranha.Azure
         /// <summary>
         /// The container in which to store media.
         /// </summary>
-        private CloudBlobContainer _container;
+        private readonly CloudBlobContainer _container;
 
         /// <summary>
         /// Default constructor.
@@ -88,7 +88,7 @@ namespace Piranha.Azure
         /// <summary>
         /// Deletes the content for the specified media.
         /// </summary>
-        /// <param name="id">The unique id/param>
+        /// <param name="id">The unique id</param>
         public async Task<bool> DeleteAsync(string id)
         {
             var blob = _container.GetBlockBlobReference(id);

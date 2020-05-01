@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -25,7 +25,7 @@ namespace Piranha.Cache
         /// <summary>
         /// If returned objects should be cloned.
         /// </summary>
-        private readonly bool _clone = false;
+        private readonly bool _clone;
 
         /// <summary>
         /// Default constructor.
@@ -61,7 +61,7 @@ namespace Piranha.Cache
                 {
                     return obj;
                 }
-                return Utils.DeepClone<T>(obj);
+                return Utils.DeepClone(obj);
             }
             return default(T);
         }

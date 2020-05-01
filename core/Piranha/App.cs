@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2016-2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -36,7 +36,7 @@ namespace Piranha
         /// <summary>
         /// If the app has been initialized.
         /// </summary>
-        private static volatile bool _isInitialized = false;
+        private static volatile bool _isInitialized;
 
         /// <summary>
         /// The currently registered blocks.
@@ -109,7 +109,7 @@ namespace Piranha
         public static AppFieldList Fields => Instance._fields;
 
         /// <summary>
-        /// Gets the currently registred modules.
+        /// Gets the currently registered modules.
         /// </summary>
         public static AppModuleList Modules => Instance._modules;
 
@@ -150,8 +150,8 @@ namespace Piranha
         /// </summary>
         public static Cache.CacheLevel CacheLevel
         {
-            get { return Instance._cacheLevel; }
-            set { Instance._cacheLevel = value; }
+            get => Instance._cacheLevel;
+            set => Instance._cacheLevel = value;
         }
 
         /// <summary>
@@ -238,12 +238,14 @@ namespace Piranha
             Instance._permissions["Core"].Add(new PermissionItem
             {
                 Name = Permission.PagePreview,
-                Title = "Page Preview"
+                Title = "Page Preview",
+                IsInternal = true
             });
             Instance._permissions["Core"].Add(new PermissionItem
             {
                 Name = Permission.PostPreview,
-                Title = "Post Preview"
+                Title = "Post Preview",
+                IsInternal = true
             });
         }
 

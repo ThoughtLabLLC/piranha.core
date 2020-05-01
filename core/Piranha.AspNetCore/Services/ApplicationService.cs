@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -11,6 +11,8 @@
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using Piranha.Extend.Fields;
 using Piranha.Models;
@@ -122,12 +124,17 @@ namespace Piranha.AspNetCore.Services
         public IMediaHelper Media { get; internal set; }
 
         /// <summary>
-        /// Gets the currently requested URL.
+        /// Gets/sets the currently requested URL.
         /// </summary>
         public string Url { get; set; }
 
         /// <summary>
-        /// Gets the id of the currently requested page.
+        /// Gets/sets the requested hostname
+        /// </summary>
+        public string Hostname { get; set; }
+
+        /// <summary>
+        /// Gets/sets the id of the currently requested page.
         /// </summary>
         public Guid PageId { get; set; }
 
@@ -158,6 +165,8 @@ namespace Piranha.AspNetCore.Services
         /// </summary>
         public async Task InitAsync(HttpContext context)
         {
+            var hostname = context.Request.Host.Host;
+
             // Gets the current site info
             if (!context.Request.Path.Value.StartsWith("/manager/"))
             {
@@ -168,10 +177,14 @@ namespace Piranha.AspNetCore.Services
                 if (!string.IsNullOrEmpty(url) && url.Length > 1)
                 {
                     var segments = url.Substring(1).Split(new char[] { '/' });
-                    site = await Api.Sites.GetByHostnameAsync($"{context.Request.Host.Host}/{segments[0]}");
+                    var prefixedHostname = $"{context.Request.Host.Host}/{segments[0]}";
+                    site = await Api.Sites.GetByHostnameAsync(prefixedHostname);
 
                     if (site != null)
+                    {
                         context.Request.Path = "/" + string.Join("/", segments.Skip(1));
+                        hostname = prefixedHostname;
+                    }
                 }
 
                 // Try to get the requested site by hostname
@@ -193,6 +206,29 @@ namespace Piranha.AspNetCore.Services
 
             // Get the current url
             Url = context.Request.Path.Value;
+            Hostname = hostname;
+        }
+
+        /// <summary>
+        /// Gets the gravatar URL from the given parameters.
+        /// </summary>
+        /// <param name="email">The email address</param>
+        /// <param name="size">The requested size</param>
+        /// <returns>The gravatar URL</returns>
+        public string GetGravatarUrl(string email, int size = 0)
+        {
+            using (var md5 = MD5.Create())
+            {
+                var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(email));
+
+                var sb = new StringBuilder(bytes.Length * 2);
+                for (var n = 0; n < bytes.Length; n++)
+                {
+                    sb.Append(bytes[n].ToString("X2"));
+                }
+                return "https://www.gravatar.com/avatar/" + sb.ToString().ToLower() +
+                       (size > 0 ? "?s=" + size : "");
+            }
         }
     }
 }

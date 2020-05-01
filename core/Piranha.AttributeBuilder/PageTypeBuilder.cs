@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2016-2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -14,10 +14,12 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Piranha.Models;
-using Piranha.Services;
 
 namespace Piranha.AttributeBuilder
 {
+    /// <summary>
+    /// Class for building and importing page types.
+    /// </summary>
     public class PageTypeBuilder : ContentTypeBuilder<PageTypeBuilder, PageType>
     {
         private readonly IApi _api;
@@ -116,7 +118,7 @@ namespace Piranha.AttributeBuilder
                         CLRType = type.GetTypeInfo().AssemblyQualifiedName,
                         Title = attr.Title,
                         UseBlocks = attr.UseBlocks,
-                        IsArchive = typeof(IArchivePage).IsAssignableFrom(type)
+                        IsArchive = typeof(IArchivePage).IsAssignableFrom(type) || attr.IsArchive
                     };
 
                     // Get all page routes
@@ -132,7 +134,7 @@ namespace Piranha.AttributeBuilder
                     }
 
                     // Add default custom editors
-                    if (typeof(IArchivePage).IsAssignableFrom(type))
+                    if (pageType.IsArchive)
                     {
                         pageType.CustomEditors.Add(new ContentTypeEditor
                         {
@@ -172,7 +174,7 @@ namespace Piranha.AttributeBuilder
                     }
 
                     // Get all allowed archive items, if this is an archive page
-                    if (typeof(IArchivePage).IsAssignableFrom(type))
+                    if (pageType.IsArchive)
                     {
                         var itemTypes = type.GetCustomAttributes(typeof(PageTypeArchiveItemAttribute));
                         foreach (PageTypeArchiveItemAttribute itemType in itemTypes)

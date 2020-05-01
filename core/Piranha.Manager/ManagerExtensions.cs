@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2016-2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -30,6 +30,7 @@ public static class ManagerModuleExtensions
 
         // Add the manager services
         services.AddScoped<AliasService>();
+        services.AddScoped<CommentService>();
         services.AddScoped<ConfigService>();
         services.AddScoped<ContentTypeService>();
         services.AddScoped<MediaService>();
@@ -68,6 +69,22 @@ public static class ManagerModuleExtensions
                 policy.RequireClaim(Permission.Admin, Permission.Admin);
                 policy.RequireClaim(Permission.Aliases, Permission.Aliases);
                 policy.RequireClaim(Permission.AliasesEdit, Permission.AliasesEdit);
+            });
+
+            // Comment policies
+            o.AddPolicy(Permission.Comments, policy => {
+                policy.RequireClaim(Permission.Admin, Permission.Admin);
+                policy.RequireClaim(Permission.Comments, Permission.Comments);
+            });
+            o.AddPolicy(Permission.CommentsApprove, policy => {
+                policy.RequireClaim(Permission.Admin, Permission.Admin);
+                policy.RequireClaim(Permission.Comments, Permission.Comments);
+                policy.RequireClaim(Permission.CommentsApprove, Permission.CommentsApprove);
+            });
+            o.AddPolicy(Permission.CommentsDelete, policy => {
+                policy.RequireClaim(Permission.Admin, Permission.Admin);
+                policy.RequireClaim(Permission.Comments, Permission.Comments);
+                policy.RequireClaim(Permission.CommentsDelete, Permission.CommentsDelete);
             });
 
             // Config policies
@@ -212,9 +229,9 @@ public static class ManagerModuleExtensions
     }
 
     /// <summary>
-    /// Uses the piranha middleware.
+    /// Uses the Piranha Manager.
     /// </summary>
-    /// <param name="builder">The current application builder</param>
+    /// <param name="builder">The application builder</param>
     /// <returns>The builder</returns>
     public static IApplicationBuilder UsePiranhaManager(this IApplicationBuilder builder) {
         return builder.UseStaticFiles(new StaticFileOptions
@@ -224,6 +241,11 @@ public static class ManagerModuleExtensions
         });
     }
 
+    /// <summary>
+    /// Adds the mappings needed for the Piranha Manager to
+    /// the endpoint routes.
+    /// </summary>
+    /// <param name="builder">The route builder</param>
     public static void MapPiranhaManager(this IEndpointRouteBuilder builder)
     {
         builder.MapHub<PreviewHub>("/manager/preview");
@@ -246,6 +268,12 @@ public static class ManagerModuleExtensions
             });
     }
 
+    /// <summary>
+    /// Static accessor to Manager module if it is registered in the Piranha
+    /// application.
+    /// </summary>
+    /// <param name="modules">The available modules</param>
+    /// <returns>The manager module</returns>
     public static Piranha.Manager.Module Manager(this Piranha.Runtime.AppModuleList modules)
     {
         return modules.Get<Piranha.Manager.Module>();

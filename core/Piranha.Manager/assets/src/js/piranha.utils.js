@@ -11,8 +11,24 @@ piranha.utils = {
     },
     isEmptyText: function (str) {
         return str == null || str.replace(/\s/g, "") == "" || str.replace(/\s/g, "") == "<br>";
+    },
+    strLength: function (str) {
+        return str != null ? str.length : 0;
     }
 };
+
+Date.prototype.addDays = function(days) {
+    var date = new Date(this.valueOf());
+    date.setDate(date.getDate() + days);
+    return date;
+}
+Date.prototype.toDateString = function(days) {
+    var date = new Date(this.valueOf());
+
+    return date.getFullYear() + "-" +
+        String(date.getMonth() + 1).padStart(2, '0') + "-" +
+        String(date.getDate()).padStart(2, '0');
+}
 
 $(document).ready(function () {
     $('.block-header .danger').hover(

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -14,8 +14,8 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Dynamic;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
+using Piranha.Manager.Extensions;
 using Piranha.Models;
 using Piranha.Manager.Models;
 using Piranha.Manager.Models.Content;
@@ -33,6 +33,8 @@ namespace Piranha.Manager.Services
         /// Default constructor.
         /// </summary>
         /// <param name="api">The current api</param>
+        /// <param name="factory">The content factory</param>
+        /// <param name="localizer">The manager localizer</param>
         public PageService(IApi api, IContentFactory factory, ManagerLocalizer localizer)
         {
             _api = api;
@@ -64,12 +66,6 @@ namespace Piranha.Manager.Services
                     AddUrl = "manager/page/add/"
                 }).ToList()
             };
-
-            var expandedLevels = 0;
-            using (var config = new Config(_api))
-            {
-                expandedLevels = config.ManagerExpandedSitemapLevels;
-            }
 
             foreach (var site in model.Sites)
             {
@@ -143,7 +139,7 @@ namespace Piranha.Manager.Services
 
         public async Task<PageEditModel> Create(Guid siteId, string typeId)
         {
-            var page = _api.Pages.Create<DynamicPage>(typeId);
+            var page = await _api.Pages.CreateAsync<DynamicPage>(typeId);
 
             page.Id = Guid.NewGuid();
             page.SiteId = siteId;
@@ -162,7 +158,7 @@ namespace Piranha.Manager.Services
 
             if (relative != null)
             {
-                var page = _api.Pages.Create<DynamicPage>(typeId);
+                var page = await _api.Pages.CreateAsync<DynamicPage>(typeId);
 
                 page.Id = Guid.NewGuid();
                 page.SiteId = relative.SiteId;
@@ -193,10 +189,7 @@ namespace Piranha.Manager.Services
                     page.ParentId = after ? relative.ParentId : relative.Id;
                     page.SortOrder = after ? relative.SortOrder + 1 : 0;
 
-                    if (page != null)
-                    {
-                        return Transform(page, false);
-                    }
+                    return Transform(page, false);
                 }
             }
             return null;
@@ -215,7 +208,12 @@ namespace Piranha.Manager.Services
 
             if (page != null)
             {
-                return Transform(page, isDraft);
+                var model = Transform(page, isDraft);
+
+                model.PendingCommentCount = (await _api.Pages.GetAllPendingCommentsAsync(id))
+                    .Count();
+
+                return model;
             }
             return null;
         }
@@ -250,7 +248,7 @@ namespace Piranha.Manager.Services
 
                 if (page == null)
                 {
-                    page = _factory.Create<DynamicPage>(pageType);
+                    page = await _factory.CreateAsync<DynamicPage>(pageType);
                     page.Id = model.Id;
                 }
 
@@ -268,6 +266,9 @@ namespace Piranha.Manager.Services
                 page.Published = !string.IsNullOrEmpty(model.Published) ? DateTime.Parse(model.Published) : (DateTime?)null;
                 page.RedirectUrl = model.RedirectUrl;
                 page.RedirectType = (RedirectType)Enum.Parse(typeof(RedirectType), model.RedirectType);
+                page.EnableComments = model.EnableComments;
+                page.CloseCommentsAfterDays = model.CloseCommentsAfterDays;
+                page.Permissions = model.SelectedPermissions;
 
                 if (pageType.Routes.Count > 1)
                 {
@@ -357,7 +358,19 @@ namespace Piranha.Manager.Services
 
                                 foreach (var item in blockGroup.Items)
                                 {
-                                    pageBlock.Items.Add(item.Model);
+                                    if (item is BlockItemModel blockItem)
+                                    {
+                                        pageBlock.Items.Add(blockItem.Model);
+                                    }
+                                    else if (item is BlockGenericModel blockGeneric)
+                                    {
+                                        var transformed = ContentUtils.TransformGenericBlock(blockGeneric);
+
+                                        if (transformed != null)
+                                        {
+                                            pageBlock.Items.Add(transformed);
+                                        }
+                                    }
                                 }
                                 page.Blocks.Add(pageBlock);
                             }
@@ -365,6 +378,15 @@ namespace Piranha.Manager.Services
                         else if (block is BlockItemModel blockItem)
                         {
                             page.Blocks.Add(blockItem.Model);
+                        }
+                        else if (block is BlockGenericModel blockGeneric)
+                        {
+                            var transformed = ContentUtils.TransformGenericBlock(blockGeneric);
+
+                            if (transformed != null)
+                            {
+                                page.Blocks.Add(transformed);
+                            }
                         }
                     }
                 }
@@ -485,13 +507,21 @@ namespace Piranha.Manager.Services
                 Published = page.Published.HasValue ? page.Published.Value.ToString("yyyy-MM-dd HH:mm") : null,
                 RedirectUrl = page.RedirectUrl,
                 RedirectType = page.RedirectType.ToString(),
-                State = GetState(page, isDraft),
+                EnableComments = page.EnableComments,
+                CloseCommentsAfterDays = page.CloseCommentsAfterDays,
+                CommentCount = page.CommentCount,
+                State = page.GetState(isDraft),
                 UseBlocks = type.UseBlocks,
                 SelectedRoute = route == null ? null : new RouteModel
                 {
                     Title = route.Title,
                     Route = route.Route
-                }
+                },
+                Permissions = App.Permissions
+                    .GetPublicPermissions()
+                    .Select(p => new KeyValuePair<string, string>(p.Name, p.Title))
+                    .ToList(),
+                SelectedPermissions = page.Permissions
             };
 
             foreach (var r in type.Routes)
@@ -513,6 +543,7 @@ namespace Piranha.Manager.Services
                         Description = regionType.Description,
                         Placeholder = regionType.ListTitlePlaceholder,
                         IsCollection = regionType.Collection,
+                        Expanded = regionType.ListExpand,
                         Icon = regionType.Icon,
                         Display = regionType.Display.ToString().ToLower()
                     }
@@ -612,86 +643,87 @@ namespace Piranha.Manager.Services
                             "block-group-horizontal" : "block-group-vertical";
                     }
 
-                    foreach (var prop in block.GetType().GetProperties(App.PropertyBindings))
-                    {
-                        if (typeof(Extend.IField).IsAssignableFrom(prop.PropertyType))
-                        {
-                            var fieldType = App.Fields.GetByType(prop.PropertyType);
-                            var field = new FieldModel
-                            {
-                                Model = (Extend.IField)prop.GetValue(block),
-                                Meta = new FieldMeta
-                                {
-                                    Id = prop.Name,
-                                    Name = prop.Name,
-                                    Component = fieldType.Component,
-                                }
-                            };
-
-                            // Check if this is a select field
-                            if (typeof(Extend.Fields.SelectFieldBase).IsAssignableFrom(fieldType.Type))
-                            {
-                                foreach(var item in ((Extend.Fields.SelectFieldBase)Activator.CreateInstance(fieldType.Type)).Items)
-                                {
-                                    field.Meta.Options.Add(Convert.ToInt32(item.Value), item.Title);
-                                }
-                            }
-
-                            // Check if we have field meta-data available
-                            var attr = prop.GetCustomAttribute<Extend.FieldAttribute>();
-                            if (attr != null)
-                            {
-                                field.Meta.Name = !string.IsNullOrWhiteSpace(attr.Title) ? attr.Title : field.Meta.Name;
-                                field.Meta.Placeholder = attr.Placeholder;
-                                field.Meta.IsHalfWidth = attr.Options.HasFlag(FieldOption.HalfWidth);
-                            }
-
-                            // Check if we have field description meta-data available
-                            var descAttr = prop.GetCustomAttribute<Extend.FieldDescriptionAttribute>();
-                            if (descAttr != null)
-                            {
-                                field.Meta.Description = descAttr.Text;
-                            }
-                            group.Fields.Add(field);
-                        }
-                    }
+                    group.Fields = ContentUtils.GetBlockFields(block);
 
                     bool firstChild = true;
                     foreach (var child in ((Extend.BlockGroup)block).Items)
                     {
                         blockType = App.Blocks.GetByType(child.Type);
 
-                        group.Items.Add(new BlockItemModel
+                        if (!blockType.IsGeneric)
                         {
-                            IsActive = firstChild,
-                            Model = child,
-                            Meta = new BlockMeta
+                            // Regular block item model
+                            group.Items.Add(new BlockItemModel
                             {
-                                Name = blockType.Name,
-                                Title = child.GetTitle(),
-                                Icon = blockType.Icon,
-                                Component = blockType.Component
-                            }
-                        });
+                                IsActive = firstChild,
+                                Model = child,
+                                Meta = new BlockMeta
+                                {
+                                    Name = blockType.Name,
+                                    Title = child.GetTitle(),
+                                    Icon = blockType.Icon,
+                                    Component = blockType.Component
+                                }
+                            });
+                        }
+                        else
+                        {
+                            // Generic block item model
+                            group.Items.Add(new BlockGenericModel
+                            {
+                                IsActive = firstChild,
+                                Model = ContentUtils.GetBlockFields(child),
+                                Type = child.Type,
+                                Meta = new BlockMeta
+                                {
+                                    Name = blockType.Name,
+                                    Title = child.GetTitle(),
+                                    Icon = blockType.Icon,
+                                    Component = blockType.Component,
+                                }
+                            });
+                        }
                         firstChild = false;
                     }
                     model.Blocks.Add(group);
                 }
                 else
                 {
-                    model.Blocks.Add(new BlockItemModel
+                    if (!blockType.IsGeneric)
                     {
-                        Model = block,
-                        Meta = new BlockMeta
+                        // Regular block item model
+                        model.Blocks.Add(new BlockItemModel
                         {
-                            Name = blockType.Name,
-                            Title = block.GetTitle(),
-                            Icon = blockType.Icon,
-                            Component = blockType.Component,
-                            IsReadonly = page.OriginalPageId.HasValue,
-                            isCollapsed = config.ManagerDefaultCollapsedBlocks
-                        }
-                    });
+                            Model = block,
+                            Meta = new BlockMeta
+                            {
+                                Name = blockType.Name,
+                                Title = block.GetTitle(),
+                                Icon = blockType.Icon,
+                                Component = blockType.Component,
+                                IsReadonly = page.OriginalPageId.HasValue,
+                                isCollapsed = config.ManagerDefaultCollapsedBlocks
+                            }
+                        });
+                    }
+                    else
+                    {
+                        // Generic block item model
+                        model.Blocks.Add(new BlockGenericModel
+                        {
+                            Model = ContentUtils.GetBlockFields(block),
+                            Type = block.Type,
+                            Meta = new BlockMeta
+                            {
+                                Name = blockType.Name,
+                                Title = block.GetTitle(),
+                                Icon = blockType.Icon,
+                                Component = blockType.Component,
+                                IsReadonly = page.OriginalPageId.HasValue,
+                                isCollapsed = config.ManagerDefaultCollapsedBlocks
+                            }
+                        });
+                    }
                 }
             }
 
@@ -706,26 +738,6 @@ namespace Piranha.Manager.Services
                 });
             }
             return model;
-        }
-
-        private string GetState(DynamicPage page, bool isDraft)
-        {
-            if (page.Created != DateTime.MinValue)
-            {
-                if (page.Published.HasValue)
-                {
-                    if (isDraft)
-                    {
-                        return ContentState.Draft;
-                    }
-                    return ContentState.Published;
-                }
-                else
-                {
-                    return ContentState.Unpublished;
-                }
-            }
-            return ContentState.New;
         }
     }
 }

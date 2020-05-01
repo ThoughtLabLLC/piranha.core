@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -35,7 +35,7 @@ namespace Piranha.Extend.Fields
         /// Gets/sets the related media object.
         /// </summary>
         /// [JsonIgnore]
-        public Models.Media Media { get; private set; }
+        public Models.Media Media { get; internal set; }
 
         /// <summary>
         /// Gets if the field has a media object available.
@@ -111,7 +111,8 @@ namespace Piranha.Extend.Fields
             {
                 return field1.Equals(field2);
             }
-            else if ((object)field1 == null && (object)field2 == null)
+
+            if ((object)field1 == null && (object)field2 == null)
             {
                 return true;
             }

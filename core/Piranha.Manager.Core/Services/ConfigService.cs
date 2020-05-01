@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -37,7 +37,15 @@ namespace Piranha.Manager.Services
                 {
                     HierarchicalPageSlugs = config.HierarchicalPageSlugs,
                     ExpandedSitemapLevels = config.ManagerExpandedSitemapLevels,
+                    ManagerPageSize = config.ManagerPageSize,
+                    DefaultCollapsedBlocks = config.ManagerDefaultCollapsedBlocks,
+                    DefaultCollapsedBlockGroupHeaders = config.ManagerDefaultCollapsedBlockGroupHeaders,
                     ArchivePageSize = config.ArchivePageSize,
+                    CommentsApprove = config.CommentsApprove,
+                    CommentsCloseAfterDays = config.CommentsCloseAfterDays,
+                    CommentsEnabledForPages = config.CommentsEnabledForPages,
+                    CommentsEnabledForPosts = config.CommentsEnabledForPosts,
+                    CommentsPageSize = config.CommentsPageSize,
                     PagesExpires = config.CacheExpiresPages,
                     PostsExpires = config.CacheExpiresPosts,
                     MediaCDN = config.MediaCDN,
@@ -57,7 +65,15 @@ namespace Piranha.Manager.Services
             {
                 config.HierarchicalPageSlugs = model.HierarchicalPageSlugs;
                 config.ManagerExpandedSitemapLevels = model.ExpandedSitemapLevels;
+                config.ManagerPageSize = model.ManagerPageSize;
+                config.ManagerDefaultCollapsedBlocks = model.DefaultCollapsedBlocks;
+                config.ManagerDefaultCollapsedBlockGroupHeaders = model.DefaultCollapsedBlockGroupHeaders;
                 config.ArchivePageSize = model.ArchivePageSize;
+                config.CommentsApprove = model.CommentsApprove;
+                config.CommentsCloseAfterDays = model.CommentsCloseAfterDays;
+                config.CommentsEnabledForPages = model.CommentsEnabledForPages;
+                config.CommentsEnabledForPosts = model.CommentsEnabledForPosts;
+                config.CommentsPageSize = model.CommentsPageSize;
                 config.CacheExpiresPages = model.PagesExpires;
                 config.CacheExpiresPosts = model.PostsExpires;
                 config.MediaCDN = model.MediaCDN;

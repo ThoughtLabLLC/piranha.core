@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2017 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -41,7 +41,9 @@ namespace Piranha
             for (var i = 0; i < arr.Length; i++)
             {
                 if (i >= startpos && i < (startpos + length))
+                {
                     tmp.Add(arr[i]);
+                }
             }
             return tmp.ToArray();
         }
@@ -50,6 +52,7 @@ namespace Piranha
         /// Generates a slug from the given string.
         /// </summary>
         /// <param name="str">The string</param>
+        /// <param name="hierarchical">If forward slashes should be allowed</param>
         /// <returns>The slug</returns>
         public static string GenerateSlug(string str, bool hierarchical = true)
         {
@@ -58,45 +61,43 @@ namespace Piranha
                 // Call the registered slug generation
                 return App.Hooks.OnGenerateSlug(str);
             }
-            else
-            {
-                // Trim & make lower case
-                var slug = str.Trim().ToLower();
 
-                // Convert culture specific characters
-                slug = slug
-                    .Replace("å", "a")
-                    .Replace("ä", "a")
-                    .Replace("á", "a")
-                    .Replace("à", "a")
-                    .Replace("ö", "o")
-                    .Replace("ó", "o")
-                    .Replace("ò", "o")
-                    .Replace("é", "e")
-                    .Replace("è", "e")
-                    .Replace("í", "i")
-                    .Replace("ì", "i");
+            // Trim & make lower case
+            var slug = str.Trim().ToLower();
 
-                // Remove special characters
-                slug = Regex.Replace(slug, @"[^a-z0-9-/ ]", "").Replace("--", "-");
+            // Convert culture specific characters
+            slug = slug
+                .Replace("å", "a")
+                .Replace("ä", "a")
+                .Replace("á", "a")
+                .Replace("à", "a")
+                .Replace("ö", "o")
+                .Replace("ó", "o")
+                .Replace("ò", "o")
+                .Replace("é", "e")
+                .Replace("è", "e")
+                .Replace("í", "i")
+                .Replace("ì", "i");
 
-                // Remove whitespaces
-                slug = Regex.Replace(slug.Replace("-", " "), @"\s+", " ").Replace(" ", "-");
+            // Remove special characters
+            slug = Regex.Replace(slug, @"[^a-z0-9-/ ]", "").Replace("--", "-");
 
-                // Remove slash if non-hierarchical
-                if (!hierarchical)
-                    slug = slug.Replace("/", "-");
+            // Remove whitespaces
+            slug = Regex.Replace(slug.Replace("-", " "), @"\s+", " ").Replace(" ", "-");
 
-                // Remove multiple dashes
-                slug = Regex.Replace(slug, @"[-]+", "-");
+            // Remove slash if non-hierarchical
+            if (!hierarchical)
+                slug = slug.Replace("/", "-");
 
-                // Remove leading & trailing dashes
-                if (slug.EndsWith("-"))
-                    slug = slug.Substring(0, slug.LastIndexOf("-"));
-                if (slug.StartsWith("-"))
-                    slug = slug.Substring(Math.Min(slug.IndexOf("-") + 1, slug.Length));
-                return slug;
-            }
+            // Remove multiple dashes
+            slug = Regex.Replace(slug, @"[-]+", "-");
+
+            // Remove leading & trailing dashes
+            if (slug.EndsWith("-"))
+                slug = slug.Substring(0, slug.LastIndexOf("-"));
+            if (slug.StartsWith("-"))
+                slug = slug.Substring(Math.Min(slug.IndexOf("-") + 1, slug.Length));
+            return slug;
         }
 
         /// <summary>
@@ -125,6 +126,28 @@ namespace Piranha
                 var str = name + date.ToString("yyyy-MM-dd HH:mm:ss");
                 var bytes = crypto.ComputeHash(encoding.GetBytes(str));
                 return $"\"{Convert.ToBase64String(bytes)}\"";
+            }
+        }
+
+        /// <summary>
+        /// Gets the gravatar URL from the given parameters.
+        /// </summary>
+        /// <param name="email">The email address</param>
+        /// <param name="size">The requested size</param>
+        /// <returns>The gravatar URL</returns>
+        public static string GenerateGravatarUrl(string email, int size = 0)
+        {
+            using (var md5 = MD5.Create())
+            {
+                var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(email));
+
+                var sb = new StringBuilder(bytes.Length * 2);
+                for (var n = 0; n < bytes.Length; n++)
+                {
+                    sb.Append(bytes[n].ToString("X2"));
+                }
+                return "https://www.gravatar.com/avatar/" + sb.ToString().ToLower() +
+                       (size > 0 ? "?s=" + size : "");
             }
         }
 
@@ -234,6 +257,7 @@ namespace Piranha
         /// Gets the value of the property with the given name for the
         /// given instance.
         /// </summary>
+        /// <param name="type">The current type</param>
         /// <param name="propertyName">The property name</param>
         /// <param name="instance">The object instance</param>
         /// <returns>The property value</returns>
@@ -252,6 +276,7 @@ namespace Piranha
         /// Sets the value of the property with the given name for the
         /// given instance.
         /// </summary>
+        /// <param name="type">The current type</param>
         /// <param name="propertyName">The property name</param>
         /// <param name="instance">The object instance</param>
         /// <param name="value">The value to set</param>

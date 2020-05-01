@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -18,6 +18,12 @@ namespace Piranha.Manager.Models
         {
             public bool Delete { get; set; }
             public bool Edit { get; set; }
+        }
+
+        public class CommentPermissions
+        {
+            public bool Approve { get; set; }
+            public bool Delete { get; set; }
         }
 
         public class MediaPermissions
@@ -57,10 +63,11 @@ namespace Piranha.Manager.Models
             public bool Save { get; set; }
         }
 
-        public AliasPermissions Aliases { get; private set; } = new AliasPermissions();
-        public MediaPermissions Media { get; private set; } = new MediaPermissions();
-        public PagePermissions Pages { get; private set; } = new PagePermissions();
-        public PostPermissions Posts { get; private set; } = new PostPermissions();
-        public SitePermissions Sites { get; private set; } = new SitePermissions();
+        public AliasPermissions Aliases { get; } = new AliasPermissions();
+        public CommentPermissions Comments { get; } = new CommentPermissions();
+        public MediaPermissions Media { get; } = new MediaPermissions();
+        public PagePermissions Pages { get; } = new PagePermissions();
+        public PostPermissions Posts { get; } = new PostPermissions();
+        public SitePermissions Sites { get; } = new SitePermissions();
     }
 }

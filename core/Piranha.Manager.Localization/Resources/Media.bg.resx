@@ -25,7 +25,7 @@
     <value>Име на папка</value>
   </data>
   <data name="Folder name is mandatory." xml:space="preserve">
-    <value>Folder name is mandatory.</value>
+    <value>Името на папката е задължително.</value>
   </data>
   <data name="Gallery" xml:space="preserve">
     <value>Галерия</value>
@@ -44,5 +44,8 @@
   </data>
   <data name="Your browser does not support the video tag." xml:space="preserve">
     <value>Вашият браузър не поддържа видео тагове</value>
+  </data>
+  <data name="List" xml:space="preserve">
+    <value>List</value>
   </data>
 </root>

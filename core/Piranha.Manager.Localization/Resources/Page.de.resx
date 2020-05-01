@@ -43,7 +43,7 @@
     <value>Navigations-Titel</value>
   </data>
   <data name="Are you sure you want to delete this page?" xml:space="preserve">
-    <value>Are you sure you want to delete this page?</value>
+    <value>Sind Sie sicher, dass Sie die Seite löschen möchten?</value>
   </data>
   <data name="Pages" xml:space="preserve">
     <value>Seiten</value>
@@ -74,5 +74,8 @@
   </data>
   <data name="Your page title" xml:space="preserve">
     <value>Dein Seitentitel</value>
+  </data>
+  <data name="If comments should be enabled for this page" xml:space="preserve">
+    <value>Sollen Kommentare für diese Seite aktiviert werden</value>
   </data>
 </root>

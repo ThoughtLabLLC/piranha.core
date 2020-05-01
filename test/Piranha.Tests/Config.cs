@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Håkan Edling
+ * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -8,38 +8,60 @@
  *
  */
 
-using System.Linq;
+using System.Threading.Tasks;
 using Xunit;
-using Piranha.Extend;
 using Piranha.Repositories;
 using Piranha.Services;
 
 namespace Piranha.Tests
 {
     [Collection("Integration tests")]
-    public class Config : BaseTests
+    public class Config : BaseTestsAsync
     {
         /// <summary>
         /// Sets up & initializes the tests.
         /// </summary>
-        protected override void Init() {
-            using (var api = CreateApi()) {
-                Piranha.App.Init(api);
+        public override Task InitializeAsync()
+        {
+            return Task.Run(() =>
+            {
+                using (var api = CreateApi())
+                {
 
-                using (var config = new Piranha.Config(api)) {
-                    config.CacheExpiresPages = 0;
-                    config.CacheExpiresPosts = 0;
-                    config.HierarchicalPageSlugs = true;
-                    config.ManagerExpandedSitemapLevels = 0;
+                    using (var config = new Piranha.Config(api)) {
+                        config.ArchivePageSize = 0;
+                        config.CacheExpiresPages = 0;
+                        config.CacheExpiresPosts = 0;
+                        config.CommentsApprove = true;
+                        config.CommentsPageSize = 0;
+                        config.HierarchicalPageSlugs = true;
+                        config.ManagerExpandedSitemapLevels = 0;
+                    }
                 }
-            }
+            });
         }
 
         /// <summary>
         /// Cleans up any possible data and resources
         /// created by the test.
         /// </summary>
-        protected override void Cleanup() { }
+        public override Task DisposeAsync()
+        {
+            return Task.Run(() => {});
+        }
+
+        [Fact]
+        public void ArchivePageSize() {
+            using (var api = CreateApi()) {
+                using (var config = new Piranha.Config(api)) {
+                    Assert.Equal(0, config.ArchivePageSize);
+
+                    config.ArchivePageSize = 5;
+
+                    Assert.Equal(5, config.ArchivePageSize);
+                }
+            }
+        }
 
         [Fact]
         public void CacheExpiresPages() {
@@ -63,6 +85,32 @@ namespace Piranha.Tests
                     config.CacheExpiresPosts = 30;
 
                     Assert.Equal(30, config.CacheExpiresPosts);
+                }
+            }
+        }
+
+        [Fact]
+        public void CommentsApprove() {
+            using (var api = CreateApi()) {
+                using (var config = new Piranha.Config(api)) {
+                    Assert.True(config.CommentsApprove);
+
+                    config.CommentsApprove = false;
+
+                    Assert.False(config.CommentsApprove);
+                }
+            }
+        }
+
+        [Fact]
+        public void CommentsPageSize() {
+            using (var api = CreateApi()) {
+                using (var config = new Piranha.Config(api)) {
+                    Assert.Equal(0, config.CommentsPageSize);
+
+                    config.CommentsPageSize = 5;
+
+                    Assert.Equal(5, config.CommentsPageSize);
                 }
             }
         }
@@ -113,29 +161,6 @@ namespace Piranha.Tests
                     Assert.Equal("https://mycdn.org/uploads/", config.MediaCDN);
                 }
             }
-        }
-
-        private IApi CreateApi()
-        {
-            var factory = new ContentFactory(services);
-            var serviceFactory = new ContentServiceFactory(factory);
-
-            var db = GetDb();
-
-            return new Api(
-                factory,
-                new AliasRepository(db),
-                new ArchiveRepository(db),
-                new Piranha.Repositories.MediaRepository(db),
-                new PageRepository(db, serviceFactory),
-                new PageTypeRepository(db),
-                new ParamRepository(db),
-                new PostRepository(db, serviceFactory),
-                new PostTypeRepository(db),
-                new SiteRepository(db, serviceFactory),
-                new SiteTypeRepository(db),
-                storage: storage
-            );
         }
     }
 }
